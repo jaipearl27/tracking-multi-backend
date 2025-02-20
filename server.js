@@ -3,6 +3,7 @@ import { connectMongo } from "./src/config/db/mongoConfig.js"
 import dotenv from "dotenv"
 import authRouter from "./src/routes/auth.js"
 import cors from 'cors'
+import usersRouter from "./src/routes/users.js"
 
 dotenv.config()
 
@@ -26,6 +27,7 @@ app.use(cors({
 }))
 
 app.use('/api/v1/auth', authRouter)
+app.use('/api/v1/users', usersRouter)
 
 
 
