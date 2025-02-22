@@ -13,13 +13,13 @@ export const signup = asyncHandler(async (req, res, next) => {
 
 
   if (!name || !email || !password) {
-    return next(new ApiErrorResponse("All fields are required", 400));
+    return res.status(400).json({ status: false, message: "All fields are required." });
   }
 
-
   const existingUser = await User.findOne({ email });
+
   if (existingUser)
-    return next(new ApiErrorResponse("User already exists!", 400));
+    return res.status(409).json({ status: false, message: "User already exists!" });
 
   const user = await User.create({
     name,
@@ -50,7 +50,7 @@ export const login = asyncHandler(async (req, res, next) => {
   const existingUser = await User.findOne({ email });
 
 
-  if (!existingUser) return next(new ApiErrorResponse("No user found!!", 400));
+  if (!existingUser) res.status(400).json({ status: false, message: "No user found!!" });
 
 
   const isValidPassword = await existingUser.isPasswordCorrect(password);

@@ -1,4 +1,5 @@
-import User from "../models/users";
+import User from "../models/users.js";
+import { asyncHandler } from "../utils/errors/asyncHandler.js";
 
 export const getUser = asyncHandler(async (req, res, next) => {
     const user = await User.findById(req.user._id);
