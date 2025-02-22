@@ -103,10 +103,23 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
 
   if (!existingUser) return res.status(400).json({ status: false, message: "No user found with this email!!" });
 
-
   const otpExists = await otpModel.findOne({ email })
 
+
+
   if (otpExists) {
+
+
+    console.log(new Date(Date.now() - 30000))
+
+    const validSecondsPassed = new Date(otpExists.createdAt) < new Date(Date.now() - 30000);
+
+    if (!validSecondsPassed) {
+      return res.status(400).json({ status: false, message: 'Please wait 30 seconds before requesting for OTP again.' })
+    }
+
+
+
     await otpModel.deleteOne({ email })
     console.log("old OTP deleted")
   }
