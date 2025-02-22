@@ -38,6 +38,7 @@ export const signup = asyncHandler(async (req, res, next) => {
 });
 
 export const login = asyncHandler(async (req, res, next) => {
+
   const { email, password } = req?.body;
   const existingUser = await User.findOne({ email });
 
@@ -53,20 +54,10 @@ export const login = asyncHandler(async (req, res, next) => {
   existingUser.token = token;
   await existingUser.save({ validateBeforeSave: false });
 
-
   res
-    // .cookie("access_token", access_token, {
-    //   ...COOKIE_OPTIONS,
-    //   expires: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
-    // })
-    // .cookie("refresh_token", refresh_token, {
-    //   ...COOKIE_OPTIONS,
-    //   expires: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days
-    // })
     .status(200)
     .json({ success: true, message: "Logged in successfully.", token });
 });
-
 
 //Logout controller
 export const logout = asyncHandler(async (req, res, next) => {
