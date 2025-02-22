@@ -4,6 +4,8 @@ import dotnev from "dotenv";
 import User from "../models/users.js";
 import { asyncHandler } from "../utils/errors/asyncHandler.js";
 import ApiErrorResponse from "../utils/errors/apiErrorResponse.js";
+import otpModel from "../models/otp.js";
+import { sendOtpMail } from "../utils/mail.js";
 
 dotnev.config();
 
@@ -108,3 +110,59 @@ export const logout = asyncHandler(async (req, res, next) => {
     return next(new ApiErrorResponse("Error in logout", 500));
   }
 });
+
+
+export const forgotPassword = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
+
+  const existingUser = await User.findOne({ email });
+
+  if (!existingUser) return res.status(400).json({ status: false, message: "No user found with this email!!" });
+
+  const otp = Math.floor(100000 + Math.random() * 900000);
+
+  const otpDocument = await otpModel.create({
+    email,
+    otp
+  })
+
+  const otpMail = await sendOtpMail(email, otp);
+
+  if (otpMail) {
+    res.status(200).json({
+      success: true,
+      message: "OTP sent to your email",
+      otpDocument
+    })
+  } else {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send OTP to your email"
+    })
+  }
+
+
+})
+
+
+export const verifyOtpAndResetPassword = asyncHandler(async (req, res, next) => {
+  const { email, otp, password } = req.body;
+
+  const otpDocument = await otpModel.findOne({ email, otp });
+
+  if (!otpDocument) return res.status(400).json({ status: false, message: "Invalid OTP" });
+
+  const user = await User.findOne({ email });
+
+  if (!user) return res.status(400).json({ status: false, message: "No user found with this email!!" });
+
+  user.password = password;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Password reset successfully"
+  })
+})
+
+

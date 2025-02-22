@@ -1,11 +1,15 @@
 import express from "express";
-import { login, signup } from "../controllers/auth.js";
+import { forgotPassword, login, signup, verifyOtpAndResetPassword } from "../controllers/auth.js";
 
 const authRouter = express.Router();
 
 authRouter.route("/signup").post(signup);
 
 authRouter.route("/signin").post(login);
+
+authRouter.route("/forgot-password").post(forgotPassword);
+
+authRouter.route("/verify-otp").post(verifyOtpAndResetPassword);
 
 export default authRouter;
 
@@ -55,4 +59,43 @@ export default authRouter;
  *         description: Logged in successfully
  *       400: 
  *         description: No User Found!.
+ * 
+ * /api/v1/auth/forgot-password:
+ *   post:
+ *     summary: Sends OTP to user's email
+ *     description: Sends OTP to user's email
+ *     parameters:
+ *       - name: email
+ *         in: JSON
+ *         type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: OTP sent to your email.
+ *       400: 
+ *         description: No user found with this email!!.
+ * 
+ * /api/v1/auth/verifyOtpAndResetPassword:
+ *   post:
+ *     summary: Verify OTP & Reset password
+ *     description: Verifies the OTP and resets the password if the OTP is valid.
+ *     parameters:
+ *       - name: email
+ *         in: JSON
+ *         type: string
+ *         required: true
+ *       - name: otp
+ *         in: JSON
+ *         type: string
+ *         required: true
+ *       - name: password
+ *         in: JSON
+ *         type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Password reset successfully.
+ *       400: 
+ *         description: No user found with this email!!.
+ *         description: Invalid OTP.
  */
