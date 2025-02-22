@@ -103,6 +103,14 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
 
   if (!existingUser) return res.status(400).json({ status: false, message: "No user found with this email!!" });
 
+
+  const otpExists = await otpModel.findOne({ email })
+
+  if (otpExists) {
+    await otpModel.deleteOne({ email })
+    console.log("old OTP deleted")
+  }
+
   const otp = Math.floor(100000 + Math.random() * 900000);
 
   const otpDocument = await otpModel.create({
