@@ -96,6 +96,6 @@ export default authRouter;
  *       200:
  *         description: Password reset successfully.
  *       400: 
- *         description: No user found with this email!!.
- *         description: Invalid OTP.
+ *         description: No user found with this email!!. Or Invalid OTP
+ *      
  */
