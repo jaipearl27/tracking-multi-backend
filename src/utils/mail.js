@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 
 dotenv.config()
 
-
 const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 465,
@@ -15,7 +14,6 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-
 export const sendOtpMail = async (email, otp) => {
     try {
         const mailOptions = {
@@ -24,14 +22,11 @@ export const sendOtpMail = async (email, otp) => {
             subject: "OTP for Password Reset",
             text: `Your OTP for password reset is ${otp}`
         }
-
         const mail = await transporter.sendMail(mailOptions);
-
-        return mail
+        return mail;
     } catch (error) {
         console.log(error);
         return null;
-
     }
 
 }
