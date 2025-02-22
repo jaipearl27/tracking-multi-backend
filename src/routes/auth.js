@@ -1,19 +1,11 @@
+
+
 import express from "express";
 import { forgotPassword, login, signup, verifyOtpAndResetPassword } from "../controllers/auth.js";
 
 const authRouter = express.Router();
 
 authRouter.route("/signup").post(signup);
-
-authRouter.route("/signin").post(login);
-
-authRouter.route("/forgot-password").post(forgotPassword);
-
-authRouter.route("/verify-otp").post(verifyOtpAndResetPassword);
-
-export default authRouter;
-
-
 /**
  * @swagger
  * /api/v1/auth/signup:
@@ -40,26 +32,39 @@ export default authRouter;
  *         description: User already exists!
  *       400: 
  *         description: All fields are required.
- * 
- * /api/v1/auth/signin:
- *   post:
- *     summary: Logs in a user
- *     description: Log-In a user
- *     parameters:
- *       - name: email
- *         in: JSON
- *         type: string
- *         required: true
- *       - name: password
- *         in: JSON
- *         type: string
- *         required: true
- *     responses:
- *       200:
- *         description: Logged in successfully
- *       400: 
- *         description: No User Found!.
- * 
+ */
+
+
+authRouter.route("/signin").post(login);
+
+/**
+* @swagger
+* /api/v1/auth/signin:
+*   post:
+*     summary: Logs in a user
+*     description: Log-In a user
+*     parameters:
+*       - name: email
+*         in: JSON
+*         type: string
+*         required: true
+*       - name: password
+*         in: JSON
+*         type: string
+*         required: true
+*     responses:
+*       200:
+*         description: Logged in successfully
+*       400: 
+*         description: No User Found!.
+*/
+
+
+
+authRouter.route("/forgot-password").post(forgotPassword);
+
+/**
+ * @swagger 
  * /api/v1/auth/forgot-password:
  *   post:
  *     summary: Sends OTP to user's email
@@ -74,7 +79,14 @@ export default authRouter;
  *         description: OTP sent to your email.
  *       400: 
  *         description: No user found with this email!!.
- * 
+ */
+
+
+
+authRouter.route("/verify-otp").post(verifyOtpAndResetPassword);
+
+/**
+ * @swagger
  * /api/v1/auth/verifyOtpAndResetPassword:
  *   post:
  *     summary: Verify OTP & Reset password
@@ -99,3 +111,7 @@ export default authRouter;
  *         description: No user found with this email!!. Or Invalid OTP
  *      
  */
+
+
+export default authRouter;
+
