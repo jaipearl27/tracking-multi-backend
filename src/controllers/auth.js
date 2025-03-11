@@ -38,26 +38,32 @@ export const signup = asyncHandler(async (req, res, next) => {
 });
 
 export const login = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
 
-  const { email, password } = req?.body;
   const existingUser = await User.findOne({ email });
 
-  if (!existingUser) res.status(400).json({ status: false, message: "No user found!!" });
+  if (!existingUser) {
+    return res.status(400).json({ success: false, message: "No user found!!" });
+  }
 
   const isValidPassword = await existingUser.isPasswordCorrect(password);
 
-  if (!isValidPassword)
+  if (!isValidPassword) {
     return next(new ApiErrorResponse("Wrong password", 400));
+  }
 
   const token = existingUser.generateToken();
-
   existingUser.token = token;
   await existingUser.save({ validateBeforeSave: false });
 
-  res
-    .status(200)
-    .json({ success: true, message: "Logged in successfully.", token });
+  res.status(200).json({
+    success: true,
+    message: "Logged in successfully.",
+    token, // Send token
+    role: existingUser.role, // Send role
+  });
 });
+
 
 //Logout controller
 export const logout = asyncHandler(async (req, res, next) => {

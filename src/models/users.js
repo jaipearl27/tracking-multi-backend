@@ -50,11 +50,21 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-
 userSchema.methods.isPasswordCorrect = async function (password) {
-  console.log(`password: ${password}`);
-  return await bcrypt.compare(password, this.password);
+  console.log("Entered Password:", password);
+  console.log("Stored Hashed Password:", this.password);
+
+  if (!password || !this.password) {
+    console.log("Missing password for comparison");
+    return false; // Prevents crashing
+  }
+
+  const isMatch = await bcrypt.compare(password, this.password);
+  console.log("Password Match:", isMatch);
+  
+  return isMatch;
 };
+
 
 
 //Generate Refresh Token

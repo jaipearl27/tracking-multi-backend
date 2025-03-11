@@ -26,6 +26,7 @@ app.use(cors({
         'GET',
         'POST',
         'PUT',
+        'PATCH',
         'DELETE'
     ],
     // credentials: true,
