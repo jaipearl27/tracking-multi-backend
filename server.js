@@ -1,11 +1,14 @@
 import express from "express"
 import { connectMongo } from "./src/config/db/mongoConfig.js"
 import dotenv from "dotenv"
-import authRouter from "./src/routes/auth.js"
 import cors from 'cors'
-import usersRouter from "./src/routes/users.js"
 import { error } from "./src/middlewares/errorMiddleware.js"
 import swaggerSetup from "./swagger.js"
+
+// routes
+import authRouter from "./src/routes/auth.js"
+import usersRouter from "./src/routes/users.js"
+import trackingLinksRouter from "./src/routes/trackingLinks.js"
 
 dotenv.config()
 
@@ -32,9 +35,11 @@ app.use(cors({
     // credentials: true,
 }))
 
+
+// routes
 app.use('/api/v1/auth', authRouter)
 app.use('/api/v1/users', usersRouter)
-
+app.use('/api/v1/trackingLinks', trackingLinksRouter)
 
 app.use(error);
 
