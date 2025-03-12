@@ -7,14 +7,9 @@ const trackingLinksSchema = new mongoose.Schema(
       required: [true, "Tracking link is required"],
       trim: true,
     },
-    campaignId: {
+    programId: {
       type: String,
-      required: [true, "Campaign ID is required"],
-    },
-    user: {
-      ref: "Users",
-      type: mongoose.Types.ObjectId,
-      // required: [true, "user id is required"]
+      required: [true, "programId is required"],
     },
   },
   { timestamps: true }

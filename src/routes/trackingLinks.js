@@ -1,6 +1,6 @@
 import express from 'express';
 import {
-    assignTrackingLink,
+    createTrackingLink,
     deleteTrackingLink,
     getAllTrackingLinks,
     getTrackingLink,
@@ -10,8 +10,7 @@ import {
 
 const trackingLinksRouter = express.Router();
 
-trackingLinksRouter.route('/').get(getAllTrackingLinks).post(addTrackingLink);
-trackingLinksRouter.route('/assign').post(assignTrackingLink);
+trackingLinksRouter.route('/').get(getAllTrackingLinks).post(createTrackingLink);
 trackingLinksRouter.route('/:id').get(getTrackingLink).patch(updateTrackingLink).delete(deleteTrackingLink);
 
 export default trackingLinksRouter;
