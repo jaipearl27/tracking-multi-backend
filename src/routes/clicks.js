@@ -1,8 +1,8 @@
 import express from "express"
-import { scheduleClickExport } from "../controllers/clicks.js"
+import { getClicks } from "../controllers/clicks.js"
 
 const clicksRouter = express.Router()
 
-clicksRouter.route('/').post(scheduleClickExport)
+clicksRouter.route('/').get(getClicks)
 
 export default clicksRouter

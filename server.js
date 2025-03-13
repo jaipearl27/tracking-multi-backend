@@ -11,10 +11,12 @@ import usersRouter from "./src/routes/users.js"
 import trackingLinksRouter from "./src/routes/trackingLinks.js"
 import clicksRouter from "./src/routes/clicks.js"
 
+import "./src/utils/scheduler.js"
+
 dotenv.config()
 
 const app = express()
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3001
 
 
 app.use(express.json())

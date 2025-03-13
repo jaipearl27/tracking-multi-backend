@@ -4,6 +4,7 @@ import dotenv from "dotenv"
 dotenv.config()
 
 import { asyncHandler } from "../utils/errors/asyncHandler.js";
+
 import ClickEventModel from "../models/clicks.js";
 
 let scheduledExport = undefined
@@ -59,26 +60,23 @@ async function downloadClickExport(path) {
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
 
-    // console.log('download', data)
     return data;
 }
 
-export const scheduleClickExport = asyncHandler(async (req, res, next) => {
-    const { programId } = req.body;
-
+export const scheduleClickExport = async (programId = undefined) => {
     if (!scheduledExport) {
-        console.log('scheduledExport 1', scheduledExport)
-
+        console.log('scheduledExport 1', scheduledExport);
         const clickExportSchedule = await scheduleExport(programId);
         scheduledExport = clickExportSchedule;
-        res.status(201).json({ success: true, message: "Clicks Export job scheduled", clickExportSchedule });
-
+        return { success: true, message: "Clicks Export job scheduled", clickExportSchedule };
     } else {
         console.log('scheduledExport 2', scheduledExport)
         const checkStatusResponse = await checkStatus(scheduledExport.QueuedUri);
 
         if (checkStatusResponse?.Status === "COMPLETED" && checkStatusResponse?.ResultUri) {
+
             scheduledExport = undefined
+
             const data = await downloadClickExport(checkStatusResponse?.ResultUri);
 
             const clickEvents = data?.Clicks.map(click => {
@@ -89,14 +87,25 @@ export const scheduleClickExport = asyncHandler(async (req, res, next) => {
                         upsert: true
                     }
                 }
-            })
+            });
 
             const DBResponse = await ClickEventModel.bulkWrite(clickEvents);
-
-            console.log('DBResponse', DBResponse)
-            res.status(201).json({ success: true, message: "Clicks Export job completed", data, DBResponse });
+            console.log('DBResponse', data, DBResponse)
+            return { success: true, message: "Clicks Export job completed", data, DBResponse };
         } else {
-            res.status(400).json({ success: false, message: "This Click Export job already still being processed..." });
+            return { success: false, message: "This Click Export job already still being processed..." };
         }
     }
-});
+};
+
+
+export const getClicks = asyncHandler(async (req, res) => {
+    const { ProgramId } = req.query;
+    const query = {}
+    if (ProgramId) query.ProgramId = ProgramId
+    const clicks = await ClickEventModel.find(query).sort({ ProgramId: 1 });
+
+    res.status(200).json({ success: true, message: "Clicks fetched successfully", clicks });
+})
+
+
