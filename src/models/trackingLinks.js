@@ -2,12 +2,12 @@ import mongoose from "mongoose";
 
 const trackingLinksSchema = new mongoose.Schema(
   {
-    trackingLink: {
+    TrackingLink: {
       type: String,
       required: [true, "Tracking link is required"],
       trim: true,
     },
-    programId: {
+    ProgramId: {
       type: String,
       required: [true, "programId is required"],
     },

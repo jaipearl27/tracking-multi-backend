@@ -4,13 +4,14 @@ import dotenv from "dotenv"
 dotenv.config()
 
 import { asyncHandler } from "../utils/errors/asyncHandler.js";
+import ClickEventModel from "../models/clicks.js";
 
-let scheduledExport = {}
+let scheduledExport = undefined
 
 const impactAuth = Buffer.from(`${process.env.IMPACT_ACCOUNT_SID}:${process.env.IMPACT_AUTH_TOKEN}`).toString('base64');
 
 async function checkStatus(path) {
-    const url = `https://api.impact.com${path}`
+    const url = `https://api.impact.com${path}`;
 
     const headers = {
         'Accept': 'application/json',
@@ -19,13 +20,11 @@ async function checkStatus(path) {
 
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
+
     return data;
 }
 
-
-
-
-async function scheduleExport(programId=undefined) {
+async function scheduleExport(programId = undefined) {
     const url = `https://api.impact.com/Mediapartners/${process.env.IMPACT_ACCOUNT_SID}/ClickExport?ResultFormat=JSON${programId ? `&ProgramId=${programId}` : ""}`;
 
     const headers = {
@@ -41,6 +40,7 @@ async function scheduleExport(programId=undefined) {
         }
 
         const data = await response.json();
+
         return data
     } catch (error) {
         console.error('Error:', error.message);
@@ -48,10 +48,8 @@ async function scheduleExport(programId=undefined) {
     }
 }
 
-
-
 async function downloadClickExport(path) {
-    const url = `https://api.impact.com${path}`
+    const url = `https://api.impact.com${path}`;
 
     const headers = {
         'Accept': 'application/json',
@@ -60,30 +58,43 @@ async function downloadClickExport(path) {
 
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
+
+    // console.log('download', data)
     return data;
 }
 
-
-
 export const scheduleClickExport = asyncHandler(async (req, res, next) => {
-
-    if (scheduledExport?.Status === "QUEUED") {
-        return res.status(400).json({ success: false, message: "Click export already scheduled" });
-    }
-
     const { programId } = req.body;
 
-    const clickExportSchedule = await scheduleExport(programId);
+    if (!scheduledExport) {
+        console.log('scheduledExport 1', scheduledExport)
 
-    if (clickExportSchedule?.Status === "QUEUED") {
+        const clickExportSchedule = await scheduleExport(programId);
         scheduledExport = clickExportSchedule;
         res.status(201).json({ success: true, message: "Clicks Export job scheduled", clickExportSchedule });
+
     } else {
-        const checkStatusResponse = await checkStatus(clickExportSchedule.QueuedUri);
+        console.log('scheduledExport 2', scheduledExport)
+        const checkStatusResponse = await checkStatus(scheduledExport.QueuedUri);
 
         if (checkStatusResponse?.Status === "COMPLETED" && checkStatusResponse?.ResultUri) {
+            scheduledExport = undefined
             const data = await downloadClickExport(checkStatusResponse?.ResultUri);
-            res.status(201).json({ success: true, message: "Clicks Export job completed", data });
+
+            const clickEvents = data?.Clicks.map(click => {
+                return {
+                    updateOne: {
+                        filter: click,
+                        update: { $set: click },
+                        upsert: true
+                    }
+                }
+            })
+
+            const DBResponse = await ClickEventModel.bulkWrite(clickEvents);
+
+            console.log('DBResponse', DBResponse)
+            res.status(201).json({ success: true, message: "Clicks Export job completed", data, DBResponse });
         } else {
             res.status(400).json({ success: false, message: "This Click Export job already still being processed..." });
         }
