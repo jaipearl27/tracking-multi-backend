@@ -7,6 +7,10 @@ const AssignmentsSchema = new mongoose.Schema(
             ref: "TrackingLinks",
             required: [true, "Tracking link ID is required"],
         },
+        // programId: {
+        //     type: String,
+        //     required: [true, "Program ID is required"],
+        // },
         userId: {
             type: mongoose.Types.ObjectId,
             ref: "Users",

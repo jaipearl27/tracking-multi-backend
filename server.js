@@ -9,6 +9,7 @@ import swaggerSetup from "./swagger.js"
 import authRouter from "./src/routes/auth.js"
 import usersRouter from "./src/routes/users.js"
 import trackingLinksRouter from "./src/routes/trackingLinks.js"
+import clicksRouter from "./src/routes/clicks.js"
 
 dotenv.config()
 
@@ -40,6 +41,8 @@ app.use(cors({
 app.use('/api/v1/auth', authRouter)
 app.use('/api/v1/users', usersRouter)
 app.use('/api/v1/trackingLinks', trackingLinksRouter)
+app.use('/api/v1/clicks', clicksRouter)
+
 
 app.use(error);
 
