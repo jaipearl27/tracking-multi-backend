@@ -4,10 +4,10 @@ import { asyncHandler } from "../utils/errors/asyncHandler.js";
 
 
 export const createUser = asyncHandler(async (req, res, next) => {
-    const { name, email,password ,role} = req.body;
+    const { name, email, password, role } = req.body;
 
     // Validate input
-    if (!name || !email ||!password) {
+    if (!name || !email || !password) {
         return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
@@ -33,13 +33,13 @@ export const createUser = asyncHandler(async (req, res, next) => {
 
 
 export const getUser = asyncHandler(async (req, res, next) => {
-    const {id} = req.params;
+    const { id } = req.params;
     const user = await User.findById(id);
     res.status(200).json({ success: true, user });
 });
 
 export const getAllUsers = asyncHandler(async (req, res, next) => {
-    const users = await User.find()
+    const users = await User.find({ role: { $ne: "ADMIN" } })
     res.status(200).json({ success: true, users })
 })
 
@@ -54,9 +54,9 @@ export const updateUser = asyncHandler(async (req, res, next) => {
         }
 
         // Update user with the provided data
-        const updatedUser = await User.findByIdAndUpdate(id, req.body, { 
-            new: true, 
-            runValidators: true 
+        const updatedUser = await User.findByIdAndUpdate(id, req.body, {
+            new: true,
+            runValidators: true
         });
 
         res.status(200).json({ success: true, user: updatedUser });
