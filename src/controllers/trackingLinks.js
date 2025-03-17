@@ -8,7 +8,6 @@ export const createTrackingLink = asyncHandler(async (req, res, next) => {
         return res.status(400).json({ success: false, message: "Tracking link and programId are required" });
     }
 
-
     const trackingLinkExists = await TrackingLinks.findOne({ TrackingLink });
     if (trackingLinkExists) {
         return res.status(400).json({ success: false, message: "Tracking link already exists" });
@@ -19,8 +18,30 @@ export const createTrackingLink = asyncHandler(async (req, res, next) => {
     res.status(201).json({ success: true, message: "Tracking link added successfully", tracking });
 });
 
-export const getTrackingLink = asyncHandler(async (req, res, next) => {
+export const getTrackingLinkByProgramId = asyncHandler(async (req, res, next) => {
+    const { ProgramId } = req.params;
+
+    if(!ProgramId){
+        return res.status(400).json({ success: false, message: "ProgramId is required" });
+    }
+
+    const trackingLinks = await TrackingLinks.find({ProgramId: ProgramId});
+
+    if (!trackingLinks) {
+        return res.status(404).json({ success: false, message: "Tracking link not found for this program" });
+    }
+
+    res.status(200).json({ success: true, trackingLinks });
+});
+
+
+export const getTrackingLinkById = asyncHandler(async (req, res, next) => {
     const { Id } = req.params;
+
+    if(!Id){
+        return res.status(400).json({ success: false, message: "Id is required" });
+    }
+
     const tracking = await TrackingLinks.findById(Id);
 
     if (!tracking) {
@@ -28,14 +49,7 @@ export const getTrackingLink = asyncHandler(async (req, res, next) => {
     }
 
     res.status(200).json({ success: true, tracking });
-});
-
-
-// export const getTrackingLinkByProgramId = asyncHandler(async (req, res, next) => {
-//     const { programId } = req.params;
-//     const tracking = await TrackingLinks.find({ programId });
-//     res.status(200).json({ success: true, tracking });
-// });
+})
 
 export const getAllTrackingLinks = asyncHandler(async (req, res, next) => {
     const trackingLinks = await TrackingLinks.find();

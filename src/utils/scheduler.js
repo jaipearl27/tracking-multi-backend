@@ -6,4 +6,4 @@ const task = () => {
     scheduleClickExport();
 }
 
-cron.schedule('* * * * *', task)
+cron.schedule('*/30 * * * *', task) //cron job to run every 30 minutes

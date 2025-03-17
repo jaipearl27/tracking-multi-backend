@@ -3,7 +3,8 @@ import {
     createTrackingLink,
     deleteTrackingLink,
     getAllTrackingLinks,
-    getTrackingLink,
+    getTrackingLinkById,
+    getTrackingLinkByProgramId,
     updateTrackingLink
 } from '../controllers/TrackingLinks.js';
 
@@ -11,6 +12,7 @@ import {
 const trackingLinksRouter = express.Router();
 
 trackingLinksRouter.route('/').get(getAllTrackingLinks).post(createTrackingLink);
-trackingLinksRouter.route('/:id').get(getTrackingLink).patch(updateTrackingLink).delete(deleteTrackingLink);
+trackingLinksRouter.route('/:id').get(getTrackingLinkById).patch(updateTrackingLink).delete(deleteTrackingLink);
+trackingLinksRouter.route('/program/:ProgramId').get(getTrackingLinkByProgramId);
 
 export default trackingLinksRouter;

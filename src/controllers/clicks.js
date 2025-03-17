@@ -63,14 +63,31 @@ async function downloadClickExport(path) {
     return data;
 }
 
+async function replayClickExport(path) {
+    const url = `https://api.impact.com${path}`;
+
+    const headers = {
+        'Accept': 'application/json',
+        'Authorization': `Basic ${impactAuth}`
+    };
+
+    const response = await fetch(url, { method: 'PUT', headers });
+    const data = await response.json();
+    console.log('scheduledExport replayed', data)
+    return data;
+}
+
+
+
 export const scheduleClickExport = async (programId = undefined) => {
     if (!scheduledExport) {
-        console.log('scheduledExport 1', scheduledExport);
+        console.log('Export job scheduled');
         const clickExportSchedule = await scheduleExport(programId);
         scheduledExport = clickExportSchedule;
+        await replayClickExport(clickExportSchedule.ReplayUri)
         return { success: true, message: "Clicks Export job scheduled", clickExportSchedule };
     } else {
-        console.log('scheduledExport 2', scheduledExport)
+        console.log('scheduledExport download requested', scheduledExport)
         const checkStatusResponse = await checkStatus(scheduledExport.QueuedUri);
 
         if (checkStatusResponse?.Status === "COMPLETED" && checkStatusResponse?.ResultUri) {
