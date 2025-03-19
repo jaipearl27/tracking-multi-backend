@@ -9,6 +9,7 @@ export const createTrackingLink = asyncHandler(async (req, res, next) => {
     }
 
     const trackingLinkExists = await TrackingLinks.findOne({ TrackingLink });
+
     if (trackingLinkExists) {
         return res.status(400).json({ success: false, message: "Tracking link already exists" });
     }
@@ -21,11 +22,11 @@ export const createTrackingLink = asyncHandler(async (req, res, next) => {
 export const getTrackingLinkByProgramId = asyncHandler(async (req, res, next) => {
     const { ProgramId } = req.params;
 
-    if(!ProgramId){
+    if (!ProgramId) {
         return res.status(400).json({ success: false, message: "ProgramId is required" });
     }
 
-    const trackingLinks = await TrackingLinks.find({ProgramId: ProgramId});
+    const trackingLinks = await TrackingLinks.find({ ProgramId: ProgramId });
 
     if (!trackingLinks) {
         return res.status(404).json({ success: false, message: "Tracking link not found for this program" });
@@ -38,7 +39,7 @@ export const getTrackingLinkByProgramId = asyncHandler(async (req, res, next) =>
 export const getTrackingLinkById = asyncHandler(async (req, res, next) => {
     const { Id } = req.params;
 
-    if(!Id){
+    if (!Id) {
         return res.status(400).json({ success: false, message: "Id is required" });
     }
 

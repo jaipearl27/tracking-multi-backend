@@ -83,6 +83,7 @@ export const scheduleClickExport = async (programId = undefined) => {
     if (!scheduledExport) {
         console.log('Export job scheduled');
         const clickExportSchedule = await scheduleExport(programId);
+        console.log('clickExportSchedule', clickExportSchedule)
         scheduledExport = clickExportSchedule;
         await replayClickExport(clickExportSchedule.ReplayUri)
         return { success: true, message: "Clicks Export job scheduled", clickExportSchedule };

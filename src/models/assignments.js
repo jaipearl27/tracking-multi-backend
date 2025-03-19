@@ -9,7 +9,7 @@ const AssignmentsSchema = new mongoose.Schema(
         },
         userId: {
             type: mongoose.Types.ObjectId,
-            ref: "Users",
+            ref: "User",
             required: [true, "User ID is required"],
         },
     },

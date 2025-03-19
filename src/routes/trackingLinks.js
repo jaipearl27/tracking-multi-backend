@@ -6,8 +6,7 @@ import {
     getTrackingLinkById,
     getTrackingLinkByProgramId,
     updateTrackingLink
-} from '../controllers/TrackingLinks.js';
-
+} from '../controllers/trackingLinks.js';
 
 const trackingLinksRouter = express.Router();
 

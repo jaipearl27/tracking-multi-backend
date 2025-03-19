@@ -12,6 +12,7 @@ import trackingLinksRouter from "./src/routes/trackingLinks.js"
 import clicksRouter from "./src/routes/clicks.js"
 
 import "./src/utils/scheduler.js"
+import assignmentsRouter from "./src/routes/assignments.js"
 
 dotenv.config()
 
@@ -44,6 +45,7 @@ app.use('/api/v1/auth', authRouter)
 app.use('/api/v1/users', usersRouter)
 app.use('/api/v1/trackingLinks', trackingLinksRouter)
 app.use('/api/v1/clicks', clicksRouter)
+app.use('/api/v1/assignments', assignmentsRouter)
 
 
 app.use(error);
