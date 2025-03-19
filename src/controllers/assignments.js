@@ -6,7 +6,7 @@ export const createAssignment = asyncHandler(async (req, res) => {
     let { trackingLinkId, userId } = req.body;
 
     if (!trackingLinkId || !userId) {
-        return res.status(400).json({ message: "Tracking link ID and user ID are required" });
+        return res.status(500).json({ message: "Tracking link ID and user ID are required" });
     }
 
     trackingLinkId = new mongoose.Types.ObjectId(`${trackingLinkId}`)
@@ -15,7 +15,7 @@ export const createAssignment = asyncHandler(async (req, res) => {
     const assignmentExists = await Assignments.findOne({ trackingLinkId, userId });
 
     if (assignmentExists) {
-        return res.status(400).json({ message: "Assignment already exists" });
+        return res.status(500).json({ message: "Assignment already exists" });
     }
 
     const assignment = await Assignments.create({ trackingLinkId, userId });
@@ -31,7 +31,7 @@ export const getAssignments = asyncHandler(async (req, res) => {
 export const getAssignmentById = asyncHandler(async (req, res) => {
     const { id } = req.params;
     if (!id) {
-        return res.status(400).json({ message: "Assignment ID is required" });
+        return res.status(500).json({ message: "Assignment ID is required" });
     }
     const assignment = await Assignments.findById(id).populate('trackingLinkId userId');
     res.status(200).json(assignment);
@@ -40,7 +40,7 @@ export const getAssignmentById = asyncHandler(async (req, res) => {
 export const getAssignmentsByTrackingLinkId = asyncHandler(async (req, res) => {
     const { trackingLinkId } = req.params;
     if (!trackingLinkId) {
-        return res.status(400).json({ message: "Tracking link ID is required" });
+        return res.status(500).json({ message: "Tracking link ID is required" });
     }
     // const assignments = await Assignments.find({ trackingLinkId: trackingLinkId }).populate('trackingLinkId userId');
 

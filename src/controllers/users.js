@@ -1,6 +1,6 @@
 import User from "../models/users.js";
 import { asyncHandler } from "../utils/errors/asyncHandler.js";
-
+import bcrypt from "bcrypt";
 
 
 export const createUser = asyncHandler(async (req, res, next) => {
@@ -53,10 +53,23 @@ export const updateUser = asyncHandler(async (req, res, next) => {
             return res.status(404).json({ success: false, message: "User not found" });
         }
 
+        console.log(req?.body, "req?.body")
+
+        const payload = {
+            name: req?.body?.name,
+            email: req?.body?.email,
+        }
+
+        if (req?.body?.password) {
+            const salt = await bcrypt.genSalt(10);
+            const newPassword = await bcrypt.hash(req?.body?.password, salt);
+            payload.password = newPassword
+        }
+
         // Update user with the provided data
-        const updatedUser = await User.findByIdAndUpdate(id, req.body, {
+        const updatedUser = await User.findByIdAndUpdate(id, payload, {
             new: true,
-            runValidators: true
+            runValidators: false
         });
 
         res.status(200).json({ success: true, user: updatedUser });
