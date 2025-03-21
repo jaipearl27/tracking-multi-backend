@@ -37,6 +37,8 @@ app.use(cors({
         'DELETE'
     ],
     // credentials: true,
+    allowedHeaders: ["Authorization", "Content-Type"]
+
 }))
 
 

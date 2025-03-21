@@ -12,6 +12,11 @@ const AssignmentsSchema = new mongoose.Schema(
             ref: "User",
             required: [true, "User ID is required"],
         },
+        status: {
+            type: String,
+            enums: ['active', 'inactive'],
+            default: 'active'
+        }
     },
     { timestamps: true }
 );

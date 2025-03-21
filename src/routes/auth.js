@@ -1,7 +1,8 @@
 
 
 import express from "express";
-import { forgotPassword, login, signup, verifyOtpAndResetPassword } from "../controllers/auth.js";
+import { forgotPassword, login, logout, signup, verifyOtpAndResetPassword } from "../controllers/auth.js";
+import { authenticateToken } from "../middlewares/authenticateToken.js";
 
 const authRouter = express.Router();
 
@@ -55,6 +56,22 @@ authRouter.route("/signin").post(login);
 *     responses:
 *       200:
 *         description: Logged in successfully
+*       400: 
+*         description: No User Found!.
+*/
+
+
+authRouter.route("/logout").post(authenticateToken, logout);
+
+/**
+* @swagger
+* /api/v1/auth/logout:
+*   post:
+*     summary: Logs out a user
+*     description: Log-out a user
+*     responses:
+*       200:
+*         description: Logged out successfully
 *       400: 
 *         description: No User Found!.
 */

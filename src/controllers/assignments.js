@@ -12,11 +12,23 @@ export const createAssignment = asyncHandler(async (req, res) => {
     trackingLinkId = new mongoose.Types.ObjectId(`${trackingLinkId}`)
     userId = new mongoose.Types.ObjectId(`${userId}`)
 
-    const assignmentExists = await Assignments.findOne({ trackingLinkId, userId });
+    const assignmentExists = await Assignments.findOne({ trackingLinkId, status: "active" });
+    // console.log(assignmentExists)
+    // console.log(String(assignmentExists.userId) , String(userId))
 
-    if (assignmentExists) {
-        return res.status(500).json({ message: "Assignment already exists" });
+    if(assignmentExists){
+        if (String(assignmentExists.userId) == String(userId) && assignmentExists.status === 'active') {
+            return res.status(500).json({ message: "Assignment already exists" });
+        }
+    
+        if(String(assignmentExists.userId) != String(userId) && assignmentExists.status === 'active') {
+            assignmentExists.status = "inactive"
+            await assignmentExists.save() 
+            // console.log(oldAssignment, 'old assignment')
+        }
     }
+
+
 
     const assignment = await Assignments.create({ trackingLinkId, userId });
 
@@ -24,7 +36,7 @@ export const createAssignment = asyncHandler(async (req, res) => {
 });
 
 export const getAssignments = asyncHandler(async (req, res) => {
-    const assignments = await Assignments.find().populate('trackingLinkId userId');
+    const assignments = await Assignments.find({status: "active"}).populate('trackingLinkId userId');
     res.status(200).json(assignments);
 });
 
@@ -48,7 +60,8 @@ export const getAssignmentsByTrackingLinkId = asyncHandler(async (req, res) => {
         [
             {
                 $match: {
-                    trackingLinkId: new mongoose.Types.ObjectId(`${trackingLinkId}`)
+                    trackingLinkId: new mongoose.Types.ObjectId(`${trackingLinkId}`),
+                    status: "active"
                 }
             },
             {
@@ -90,14 +103,29 @@ export const getAssignmentsByTrackingLinkId = asyncHandler(async (req, res) => {
                     as: "Clicks"
                 }
             },
+
+
             {
                 $addFields: {
-                    totalClicks: { $size: "$Clicks" }
+                    filteredClicks: {
+                        $filter: {
+                            input: "$Clicks",
+                            as: "click",
+                            cond: { $gte: ["$$click.EventDate", "$createdAt"] }
+                        }
+                    }
                 }
             },
             {
+                $addFields: {
+                    totalClicks: { $size: "$filteredClicks" }
+                }
+            },
+
+            {
                 $project: {
                     Clicks: 0,
+                    filteredClicks: 0,
                     "userId.password": 0
                 }
             }
