@@ -25,8 +25,8 @@ async function checkStatus(path) {
     return data;
 }
 
-async function scheduleExport(programId = undefined) {
-    const url = `https://api.impact.com/Mediapartners/${process.env.IMPACT_ACCOUNT_SID}/ClickExport?ResultFormat=JSON${programId ? `&ProgramId=${programId}` : ""}`;
+async function scheduleExport(programId = undefined, date = undefined) {
+    const url = `https://api.impact.com/Mediapartners/${process.env.IMPACT_ACCOUNT_SID}/ClickExport?ResultFormat=JSON${programId ? `&ProgramId=${programId}` : ""}${date ? `&Date=${date}` : ""}`;
 
     const headers = {
         'Accept': 'application/json',
@@ -79,10 +79,10 @@ async function replayClickExport(path) {
 
 
 
-export const scheduleClickExport = async (programId = undefined) => {
+export const scheduleClickExport = async (programId = undefined, date = undefined) => {
     if (!scheduledExport) {
         console.log('Export job scheduled');
-        const clickExportSchedule = await scheduleExport(programId);
+        const clickExportSchedule = await scheduleExport(programId, date);
         console.log('clickExportSchedule', clickExportSchedule)
         scheduledExport = clickExportSchedule;
         await replayClickExport(clickExportSchedule.ReplayUri)
@@ -115,6 +115,73 @@ export const scheduleClickExport = async (programId = undefined) => {
         }
     }
 };
+
+
+async function processClickExport(date, programId=undefined,) {
+    console.log(`Scheduling export for ${date}...`);
+    let scheduledExport = await scheduleExport(programId, date);
+
+    if (!scheduledExport || !scheduledExport.ReplayUri) {
+        console.log(`Failed to schedule export for ${date}`);
+        return;
+    }
+
+    await replayClickExport(scheduledExport.ReplayUri);
+
+    // Wait and check status periodically
+    let checkStatusResponse;
+    while (true) {
+        console.log(`Checking status for ${date}...`);
+        checkStatusResponse = await checkStatus(scheduledExport.QueuedUri);
+
+        if (checkStatusResponse?.Status === "COMPLETED" && checkStatusResponse?.ResultUri) {
+            console.log(`Export for ${date} completed. Downloading...`);
+            break;
+        }
+
+        console.log(`Export for ${date} still processing...`);
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds before checking again
+    }
+
+    const data = await downloadClickExport(checkStatusResponse.ResultUri);
+
+    if (data?.Clicks?.length) {
+        const clickEvents = data.Clicks.map((click) => ({
+            updateOne: { filter: click, update: { $set: click }, upsert: true },
+        }));
+
+        const DBResponse = await ClickEventModel.bulkWrite(clickEvents);
+        console.log(`Export for ${date} saved to DB:`, DBResponse);
+    } else {
+        console.log(`No click data found for ${date}`);
+    }
+}
+
+export async function scheduleClickExportsForDateRange( startDate, endDate, programId=undefined,) {
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    for (let date = start; date <= end; date.setDate(date.getDate() + 1)) {
+        let formattedDate = date.toISOString().split("T")[0];
+        console.log('in')
+        await processClickExport(formattedDate,programId); // Process each day's export sequentially
+    }
+
+    return "Process completed."
+}
+
+
+
+
+
+export const scheduleExportAPI = asyncHandler(async (req, res) => {
+    const { programId, startDate, endDate } = req?.query
+    const result = await scheduleClickExportsForDateRange(startDate, endDate, programId)
+    return res.status(200).send(result)
+
+})
+
 
 
 export const getClicks = asyncHandler(async (req, res) => {
