@@ -38,6 +38,12 @@ export const getUser = asyncHandler(async (req, res, next) => {
     res.status(200).json({ success: true, user });
 });
 
+
+export const getUserInfo = asyncHandler(async (req, res) => {
+    res.status(200).json({success: true})
+})
+
+
 export const getAllUsers = asyncHandler(async (req, res, next) => {
     const users = await User.find({ role: { $ne: "ADMIN" } })
     res.status(200).json({ success: true, users })
