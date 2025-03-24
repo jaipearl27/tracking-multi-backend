@@ -1,8 +1,9 @@
 import express from "express"
-import { getClicks, scheduleExportAPI } from "../controllers/clicks.js"
+import { getClicks, getClicksCountAsPerProgramId, scheduleExportAPI } from "../controllers/clicks.js"
 
 const clicksRouter = express.Router()
 
 clicksRouter.route('/').get(getClicks).post(scheduleExportAPI)
+clicksRouter.route('/total/:ProgramId').get(getClicksCountAsPerProgramId)
 
 export default clicksRouter

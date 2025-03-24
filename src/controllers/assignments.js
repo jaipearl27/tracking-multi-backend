@@ -16,14 +16,14 @@ export const createAssignment = asyncHandler(async (req, res) => {
     // console.log(assignmentExists)
     // console.log(String(assignmentExists.userId) , String(userId))
 
-    if(assignmentExists){
+    if (assignmentExists) {
         if (String(assignmentExists.userId) == String(userId) && assignmentExists.status === 'active') {
             return res.status(500).json({ message: "Assignment already exists" });
         }
-    
-        if(String(assignmentExists.userId) != String(userId) && assignmentExists.status === 'active') {
+
+        if (String(assignmentExists.userId) != String(userId) && assignmentExists.status === 'active') {
             assignmentExists.status = "inactive"
-            await assignmentExists.save() 
+            await assignmentExists.save()
             // console.log(oldAssignment, 'old assignment')
         }
     }
@@ -36,7 +36,7 @@ export const createAssignment = asyncHandler(async (req, res) => {
 });
 
 export const getAssignments = asyncHandler(async (req, res) => {
-    const assignments = await Assignments.find({status: "active"}).populate('trackingLinkId userId');
+    const assignments = await Assignments.find({ status: "active" }).populate('trackingLinkId userId');
     res.status(200).json(assignments);
 });
 
@@ -56,81 +56,175 @@ export const getAssignmentsByTrackingLinkId = asyncHandler(async (req, res) => {
     }
     // const assignments = await Assignments.find({ trackingLinkId: trackingLinkId }).populate('trackingLinkId userId');
 
-    const assignments = await Assignments.aggregate(
-        [
-            {
-                $match: {
-                    trackingLinkId: new mongoose.Types.ObjectId(`${trackingLinkId}`),
-                    status: "active"
-                }
-            },
-            {
-                $lookup: {
-                    from: "TrackingLinks",
-                    localField: "trackingLinkId",
-                    foreignField: "_id",
-                    as: "trackingLinkId"
-                }
-            },
-
-            {
-                $unwind: {
-                    path: "$trackingLinkId",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "userId",
-                    foreignField: "_id",
-                    as: "userId"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$userId",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-
-            {
-                $lookup: {
-                    from: "ClickEvents",
-                    localField: "trackingLinkId.ProgramId",
-                    foreignField: "ProgramId",
-                    as: "Clicks"
-                }
-            },
-
-
-            {
-                $addFields: {
-                    filteredClicks: {
-                        $filter: {
-                            input: "$Clicks",
-                            as: "click",
-                            cond: { $gte: ["$$click.EventDate", "$createdAt"] }
+    const pipeline = [
+        {
+            $match: {
+                trackingLinkId: new mongoose.Types.ObjectId(`${trackingLinkId}`),
+                status: "active"
+            }
+        },
+        {
+            $lookup: {
+                from: "TrackingLinks",
+                localField: "trackingLinkId",
+                foreignField: "_id",
+                as: "trackingLinkId"
+            }
+        },
+        {
+            $unwind: {
+                path: "$trackingLinkId",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "userId"
+            }
+        },
+        {
+            $unwind: {
+                path: "$userId",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $lookup: {
+                from: "ClickEvents",
+                localField: "trackingLinkId.ProgramId",
+                foreignField: "ProgramId",
+                as: "Clicks"
+            }
+        },
+        {
+            $addFields: {
+                Clicks: {
+                    $filter: {
+                        input: "$Clicks",
+                        as: "click",
+                        cond: {
+                            $gte: [
+                                { $toDate: "$$click.EventDate" }, // Ensure EventDate is a Date
+                                "$createdAt" // createdAt is already a Date
+                            ]
                         }
                     }
                 }
-            },
-            {
-                $addFields: {
-                    totalClicks: { $size: "$filteredClicks" }
-                }
-            },
-
-            {
-                $project: {
-                    Clicks: 0,
-                    filteredClicks: 0,
-                    "userId.password": 0
-                }
             }
-        ]
+        },
+        {
+            $addFields: {
+                totalClicks: { $size: "$Clicks" }
+            }
+        },
+        {
+            $project: {
+                Clicks: 0,
+                "userId.password": 0
+            }
+        }
+    ];
+
+
+    // console.log(`pipeline==================================`, pipeline)
+
+
+    const assignments = await Assignments.aggregate(
+        pipeline
     );
 
     res.status(200).json(assignments);
-});
+}); 
+
+
+
+export const getUserAssignments = asyncHandler(async (req, res) => {
+    console.log("req?.user", req?.user)
+
+    // const assignments = await Assignments.find({ trackingLinkId: trackingLinkId }).populate('trackingLinkId userId');
+
+    const pipeline = [
+        {
+            $match: {
+                userId: new mongoose.Types.ObjectId(`${req.user._id}`),
+                status: "active"
+            }
+        },
+        {
+            $lookup: {
+                from: "TrackingLinks",
+                localField: "trackingLinkId",
+                foreignField: "_id",
+                as: "trackingLinkId"
+            }
+        },
+        {
+            $unwind: {
+                path: "$trackingLinkId",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "userId"
+            }
+        },
+        {
+            $unwind: {
+                path: "$userId",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $lookup: {
+                from: "ClickEvents",
+                localField: "trackingLinkId.ProgramId",
+                foreignField: "ProgramId",
+                as: "Clicks"
+            }
+        },
+        {
+            $addFields: {
+                Clicks: {
+                    $filter: {
+                        input: "$Clicks",
+                        as: "click",
+                        cond: {
+                            $gte: [
+                                { $toDate: "$$click.EventDate" }, // Ensure EventDate is a Date
+                                "$createdAt" // createdAt is already a Date
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $addFields: {
+                totalClicks: { $size: "$Clicks" }
+            }
+        },
+        {
+            $project: {
+                Clicks: 0,
+                "userId.password": 0
+            }
+        }
+    ];
+
+
+    // console.log(`pipeline==================================`, pipeline)
+
+
+    const assignments = await Assignments.aggregate(
+        pipeline
+    );
+
+    res.status(200).json(assignments);
+}); 

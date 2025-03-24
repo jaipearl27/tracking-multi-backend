@@ -97,7 +97,15 @@ export const scheduleClickExport = async (programId = undefined, date = undefine
 
             const data = await downloadClickExport(checkStatusResponse?.ResultUri);
 
+
+
             const clickEvents = data?.Clicks.map(click => {
+
+                // Ensure EventDate is stored as a Date
+                if (click.EventDate && typeof click.EventDate === "string") {
+                    click.EventDate = new Date(click.EventDate);
+                }
+
                 return {
                     updateOne: {
                         filter: click,
@@ -117,7 +125,7 @@ export const scheduleClickExport = async (programId = undefined, date = undefine
 };
 
 
-async function processClickExport(date, programId=undefined,) {
+async function processClickExport(date, programId = undefined,) {
     console.log(`Scheduling export for ${date}...`);
     let scheduledExport = await scheduleExport(programId, date);
 
@@ -157,7 +165,7 @@ async function processClickExport(date, programId=undefined,) {
     }
 }
 
-export async function scheduleClickExportsForDateRange( startDate, endDate, programId=undefined,) {
+export async function scheduleClickExportsForDateRange(startDate, endDate, programId = undefined,) {
 
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -165,7 +173,7 @@ export async function scheduleClickExportsForDateRange( startDate, endDate, prog
     for (let date = start; date <= end; date.setDate(date.getDate() + 1)) {
         let formattedDate = date.toISOString().split("T")[0];
         console.log('in')
-        await processClickExport(formattedDate,programId); // Process each day's export sequentially
+        await processClickExport(formattedDate, programId); // Process each day's export sequentially
     }
 
     return "Process completed."
@@ -191,6 +199,13 @@ export const getClicks = asyncHandler(async (req, res) => {
     const clicks = await ClickEventModel.find(query).sort({ ProgramId: 1 });
 
     res.status(200).json({ success: true, message: "Clicks fetched successfully", clicks });
+})
+
+
+export const getClicksCountAsPerProgramId = asyncHandler(async (req, res) => {
+    const {ProgramId} = req?.params
+    const totalClicks = await ClickEventModel.countDocuments({ProgramId: ProgramId})
+    res.status(200).json({totalClicks})
 })
 
 
