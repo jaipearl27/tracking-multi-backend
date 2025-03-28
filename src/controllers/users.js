@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 
 
 export const createUser = asyncHandler(async (req, res, next) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, phone } = req.body;
 
     // Validate input
     if (!name || !email || !password) {
@@ -25,7 +25,8 @@ export const createUser = asyncHandler(async (req, res, next) => {
         name,
         email,
         password,
-        role
+        role,
+        phone
     });
 
     res.status(201).json({ success: true, message: "User created successfully", user });
@@ -35,12 +36,16 @@ export const createUser = asyncHandler(async (req, res, next) => {
 export const getUser = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     const user = await User.findById(id);
-    res.status(200).json({ success: true, user });
+    res.status(200).json({ success: true, data: user });
 });
 
 
 export const getUserInfo = asyncHandler(async (req, res) => {
-    res.status(200).json({success: true})
+
+    if(!req?.user?._id)  res.status(500).json({status: false, message: "User ID not provided."})
+
+    const data = await User.findById(req?.user?._id).select("-password")   
+    res.status(200).json({success: true, data:data})
 })
 
 
@@ -64,6 +69,7 @@ export const updateUser = asyncHandler(async (req, res, next) => {
         const payload = {
             name: req?.body?.name,
             email: req?.body?.email,
+            phone: req?.body?.phone
         }
 
         if (req?.body?.password) {

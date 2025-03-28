@@ -23,6 +23,7 @@ export const createAssignment = asyncHandler(async (req, res) => {
 
         if (String(assignmentExists.userId) != String(userId) && assignmentExists.status === 'active') {
             assignmentExists.status = "inactive"
+            assignmentExists.inactiveDate = new Date.now()
             await assignmentExists.save()
             // console.log(oldAssignment, 'old assignment')
         }
@@ -48,6 +49,9 @@ export const getAssignmentById = asyncHandler(async (req, res) => {
     const assignment = await Assignments.findById(id).populate('trackingLinkId userId');
     res.status(200).json(assignment);
 });
+
+
+// uses same/similar aggregation pipelines:
 
 export const getAssignmentsByTrackingLinkId = asyncHandler(async (req, res) => {
     const { trackingLinkId } = req.params;
@@ -129,15 +133,12 @@ export const getAssignmentsByTrackingLinkId = asyncHandler(async (req, res) => {
     ];
 
 
-    // console.log(`pipeline==================================`, pipeline)
-
-
     const assignments = await Assignments.aggregate(
         pipeline
     );
 
     res.status(200).json(assignments);
-}); 
+});
 
 
 
@@ -227,4 +228,113 @@ export const getUserAssignments = asyncHandler(async (req, res) => {
     );
 
     res.status(200).json(assignments);
-}); 
+});
+
+export const getAssignmentsByUserId = asyncHandler(async (req, res) => {
+
+
+    const { id } = req?.params
+
+    if (!id) res.status(400).json({ status: false, message: "User Id not provided." })
+
+    const pipeline = [
+        {
+            $match: {
+                userId: new mongoose.Types.ObjectId(`${id}`),
+            }
+        },
+        {
+            $lookup: {
+                from: "TrackingLinks",
+                localField: "trackingLinkId",
+                foreignField: "_id",
+                as: "trackingLinkId"
+            }
+        },
+        {
+            $unwind: {
+                path: "$trackingLinkId",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "userId"
+            }
+        },
+        {
+            $unwind: {
+                path: "$userId",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $lookup: {
+                from: "ClickEvents",
+                localField: "trackingLinkId.ProgramId",
+                foreignField: "ProgramId",
+                as: "Clicks"
+            }
+        },
+        {
+            $addFields: {
+                Clicks: {
+                    $filter: {
+                        input: "$Clicks",
+                        as: "click",
+                        cond: {
+                            $and: [
+                                {
+                                    $gte: [
+                                        { $toDate: "$$click.EventDate" },
+                                        "$createdAt"
+                                    ]
+                                },
+                                {
+                                    $or: [
+                                        {
+                                            $eq: ["$status", "active"]
+                                        },
+                                        {
+                                            $and: [
+                                                { $eq: ["$status", "inactive"] },
+                                                { $lte: [{ $toDate: "$$click.EventDate" }, "$inactiveDate"] }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $addFields: {
+                totalClicks: { $size: "$Clicks" }
+            }
+        },
+        {
+            $project: {
+                Clicks: 0,
+                "userId.password": 0
+            }
+        }
+    ];
+
+
+    // console.log(`pipeline==================================`, pipeline)
+
+
+    const assignments = await Assignments.aggregate(
+        pipeline
+    );
+
+    res.status(200).json(assignments);
+});
+
+
+// uses same/similar aggregation pipelines ends

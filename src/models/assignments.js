@@ -16,6 +16,10 @@ const AssignmentsSchema = new mongoose.Schema(
             type: String,
             enums: ['active', 'inactive'],
             default: 'active'
+        },
+        inactiveDate: {
+            type: Date,
+            required: false
         }
     },
     { timestamps: true }

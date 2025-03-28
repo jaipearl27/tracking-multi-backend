@@ -24,10 +24,12 @@ const userSchema = new mongoose.Schema(
       required: [true, "Password is required"],
       minlength: 6,
     },
-    // mobileNumber: {
-    //   type: String,
-    //   required: [true, "Mobile number is required"],
-    // },
+    phone: {
+      type: String,
+      required: false,
+      default: '',
+      maxLength: 15,
+    },
     role: {
       type: String,
       enum: AvailableUserRoles,
@@ -61,7 +63,7 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 
   const isMatch = await bcrypt.compare(password, this.password);
   console.log("Password Match:", isMatch);
-  
+
   return isMatch;
 };
 

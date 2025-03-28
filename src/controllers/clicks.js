@@ -85,8 +85,12 @@ export const scheduleClickExport = async (programId = undefined, date = undefine
         const clickExportSchedule = await scheduleExport(programId, date);
         console.log('clickExportSchedule', clickExportSchedule)
         scheduledExport = clickExportSchedule;
-        await replayClickExport(clickExportSchedule.ReplayUri)
-        return { success: true, message: "Clicks Export job scheduled", clickExportSchedule };
+        if (clickExportSchedule) {
+            await replayClickExport(clickExportSchedule?.ReplayUri)
+            return { success: true, message: "Clicks Export job scheduled", clickExportSchedule };
+        } else {
+            return {success: false, message: "Error during scheduling export."}
+        }
     } else {
         console.log('scheduledExport download requested', scheduledExport)
         const checkStatusResponse = await checkStatus(scheduledExport.QueuedUri);
@@ -203,9 +207,9 @@ export const getClicks = asyncHandler(async (req, res) => {
 
 
 export const getClicksCountAsPerProgramId = asyncHandler(async (req, res) => {
-    const {ProgramId} = req?.params
-    const totalClicks = await ClickEventModel.countDocuments({ProgramId: ProgramId})
-    res.status(200).json({totalClicks})
+    const { ProgramId } = req?.params
+    const totalClicks = await ClickEventModel.countDocuments({ ProgramId: ProgramId })
+    res.status(200).json({ totalClicks })
 })
 
 
