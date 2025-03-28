@@ -23,7 +23,7 @@ export const createAssignment = asyncHandler(async (req, res) => {
 
         if (String(assignmentExists.userId) != String(userId) && assignmentExists.status === 'active') {
             assignmentExists.status = "inactive"
-            assignmentExists.inactiveDate = new Date.now()
+            assignmentExists.inactiveDate = Date.now()
             await assignmentExists.save()
             // console.log(oldAssignment, 'old assignment')
         }
@@ -150,8 +150,7 @@ export const getUserAssignments = asyncHandler(async (req, res) => {
     const pipeline = [
         {
             $match: {
-                userId: new mongoose.Types.ObjectId(`${req.user._id}`),
-                status: "active"
+                userId: new mongoose.Types.ObjectId(`${req?.user?._id}`),
             }
         },
         {
@@ -197,9 +196,26 @@ export const getUserAssignments = asyncHandler(async (req, res) => {
                         input: "$Clicks",
                         as: "click",
                         cond: {
-                            $gte: [
-                                { $toDate: "$$click.EventDate" }, // Ensure EventDate is a Date
-                                "$createdAt" // createdAt is already a Date
+                            $and: [
+                                {
+                                    $gte: [
+                                        { $toDate: "$$click.EventDate" },
+                                        "$createdAt"
+                                    ]
+                                },
+                                {
+                                    $or: [
+                                        {
+                                            $eq: ["$status", "active"]
+                                        },
+                                        {
+                                            $and: [
+                                                { $eq: ["$status", "inactive"] },
+                                                { $lte: [{ $toDate: "$$click.EventDate" }, "$inactiveDate"] }
+                                            ]
+                                        }
+                                    ]
+                                }
                             ]
                         }
                     }
@@ -218,7 +234,6 @@ export const getUserAssignments = asyncHandler(async (req, res) => {
             }
         }
     ];
-
 
     // console.log(`pipeline==================================`, pipeline)
 
