@@ -2,10 +2,10 @@ import TrackingLinks from "../models/trackingLinks.js";
 import { asyncHandler } from "../utils/errors/asyncHandler.js";
 
 export const createTrackingLink = asyncHandler(async (req, res, next) => {
-    const { TrackingLink, ProgramId } = req.body;
+    const { TrackingLink, ProgramId, platform } = req.body;
 
-    if (!TrackingLink || !ProgramId) {
-        return res.status(400).json({ success: false, message: "Tracking link and programId are required" });
+    if (!TrackingLink || !ProgramId || !platform) {
+        return res.status(400).json({ success: false, message: "Tracking link, programId & platform are required" });
     }
 
     const trackingLinkExists = await TrackingLinks.findOne({ TrackingLink });
@@ -14,7 +14,7 @@ export const createTrackingLink = asyncHandler(async (req, res, next) => {
         return res.status(400).json({ success: false, message: "Tracking link already exists" });
     }
 
-    const tracking = await TrackingLinks.create({ TrackingLink, ProgramId });
+    const tracking = await TrackingLinks.create({ TrackingLink, ProgramId, platform });
 
     res.status(201).json({ success: true, message: "Tracking link added successfully", tracking });
 });
