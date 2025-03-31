@@ -20,6 +20,11 @@ const AssignmentsSchema = new mongoose.Schema(
         inactiveDate: {
             type: Date,
             required: false
+        },
+        platform: {
+            type: String,
+            required: true,
+            enums: ['impact', 'partnerize']
         }
     },
     { timestamps: true }
