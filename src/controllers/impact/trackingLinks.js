@@ -1,5 +1,5 @@
-import TrackingLinks from "../models/trackingLinks.js";
-import { asyncHandler } from "../utils/errors/asyncHandler.js";
+import TrackingLinks from "../../models/impact/trackingLinks.js";
+import { asyncHandler } from "../../utils/errors/asyncHandler.js";
 
 export const createTrackingLink = asyncHandler(async (req, res, next) => {
     const { TrackingLink, ProgramId, platform } = req.body;

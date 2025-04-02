@@ -1,5 +1,6 @@
 import express from "express"
-import { getClicks, getClicksCountAsPerProgramId, scheduleExportAPI } from "../controllers/clicks.js"
+import { getClicks, getClicksCountAsPerProgramId, scheduleExportAPI } from "../../controllers/impact/clicks.js"
+
 
 const clicksRouter = express.Router()
 

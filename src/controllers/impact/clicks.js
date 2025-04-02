@@ -3,9 +3,9 @@ import dotenv from "dotenv"
 
 dotenv.config()
 
-import { asyncHandler } from "../utils/errors/asyncHandler.js";
+import { asyncHandler } from "../../utils/errors/asyncHandler.js";
 
-import ClickEventModel from "../models/clicks.js";
+import ClickEventModel from "../../models/impact/clicks.js";
 
 let scheduledExport = undefined
 

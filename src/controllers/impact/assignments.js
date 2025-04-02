@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import Assignments from "../models/assignments.js";
-import { asyncHandler } from "../utils/errors/asyncHandler.js";
+import Assignments from "../../models/impact/assignments.js";
+import { asyncHandler } from "../../utils/errors/asyncHandler.js";
 
 export const createAssignment = asyncHandler(async (req, res) => {
     let { trackingLinkId, userId } = req.body;

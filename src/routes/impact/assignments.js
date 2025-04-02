@@ -1,6 +1,6 @@
 import express from "express";
-import { createAssignment, getAssignmentById, getAssignments, getAssignmentsByTrackingLinkId, getAssignmentsByUserId, getUserAssignments } from "../controllers/assignments.js";
-import { authenticateToken } from "../middlewares/authenticateToken.js";
+import { createAssignment, getAssignmentById, getAssignments, getAssignmentsByTrackingLinkId, getAssignmentsByUserId, getUserAssignments } from "../../controllers/impact/assignments.js";
+import { authenticateToken } from "../../middlewares/authenticateToken.js";
 
 const assignmentsRouter = express.Router();
 

@@ -1,12 +1,6 @@
 import express from 'express';
-import {
-    createTrackingLink,
-    deleteTrackingLink,
-    getAllTrackingLinks,
-    getTrackingLinkById,
-    getTrackingLinkByProgramId,
-    updateTrackingLink
-} from '../controllers/trackingLinks.js';
+import { createTrackingLink, deleteTrackingLink, getAllTrackingLinks, getTrackingLinkById, getTrackingLinkByProgramId, updateTrackingLink } from '../../controllers/impact/trackingLinks.js';
+
 
 const trackingLinksRouter = express.Router();
 

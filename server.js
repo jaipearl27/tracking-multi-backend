@@ -5,14 +5,16 @@ import cors from 'cors'
 import { error } from "./src/middlewares/errorMiddleware.js"
 import swaggerSetup from "./swagger.js"
 
+import "./src/utils/scheduler.js"
+
 // routes
 import authRouter from "./src/routes/auth.js"
 import usersRouter from "./src/routes/users.js"
-import trackingLinksRouter from "./src/routes/trackingLinks.js"
-import clicksRouter from "./src/routes/clicks.js"
+import trackingLinksRouter from "./src/routes/impact/trackingLinks.js"
+import clicksRouter from "./src/routes/impact/clicks.js"
+import assignmentsRouter from "./src/routes/impact/assignments.js"
+import actionsRouter from "./src/routes/impact/actions.js"
 
-import "./src/utils/scheduler.js"
-import assignmentsRouter from "./src/routes/assignments.js"
 
 dotenv.config()
 
@@ -42,12 +44,15 @@ app.use(cors({
 }))
 
 
-// routes
+// routes v1 for impact
 app.use('/api/v1/auth', authRouter)
 app.use('/api/v1/users', usersRouter)
 app.use('/api/v1/trackingLinks', trackingLinksRouter)
 app.use('/api/v1/clicks', clicksRouter)
 app.use('/api/v1/assignments', assignmentsRouter)
+app.use('/api/v1/actions', actionsRouter)
+
+// routes v2 for partnerize
 
 
 app.use(error);

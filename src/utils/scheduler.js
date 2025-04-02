@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { scheduleClickExport } from "../controllers/clicks.js";
+import { scheduleClickExport } from "../controllers/impact/clicks.js";
 
 const task = () => {
     console.log('running cron job for impact click export', new Date().toISOString());
