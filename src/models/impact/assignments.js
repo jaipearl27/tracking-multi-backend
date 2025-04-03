@@ -25,6 +25,12 @@ const AssignmentsSchema = new mongoose.Schema(
             type: String,
             required: true,
             enums: ['impact', 'partnerize']
+        },
+        commissionPercentage: {
+            type: Number,
+            required: [true, "Commission percentage is required"],
+            min: 0,
+            max: 100,
         }
     },
     { timestamps: true }

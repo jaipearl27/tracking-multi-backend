@@ -3,10 +3,10 @@ import Assignments from "../../models/impact/assignments.js";
 import { asyncHandler } from "../../utils/errors/asyncHandler.js";
 
 export const createAssignment = asyncHandler(async (req, res) => {
-    let { trackingLinkId, userId } = req.body;
+    let { trackingLinkId, userId, commissionPercentage, platform } = req.body;
 
-    if (!trackingLinkId || !userId) {
-        return res.status(500).json({ message: "Tracking link ID and user ID are required" });
+    if (!trackingLinkId || !userId || !commissionPercentage || !platform) {
+        return res.status(500).json({ message: "Tracking link ID, user ID & commission percentage is required" });
     }
 
     trackingLinkId = new mongoose.Types.ObjectId(`${trackingLinkId}`)
@@ -31,7 +31,7 @@ export const createAssignment = asyncHandler(async (req, res) => {
 
 
 
-    const assignment = await Assignments.create({ trackingLinkId, userId });
+    const assignment = await Assignments.create({ trackingLinkId, userId, commissionPercentage, platform });
 
     res.status(201).json(assignment);
 });
@@ -81,6 +81,37 @@ export const getAssignmentsByTrackingLinkId = asyncHandler(async (req, res) => {
                 preserveNullAndEmptyArrays: true
             }
         },
+
+        {
+            $lookup: {
+                from: "Actions",
+                localField: "trackingLinkId.ProgramId",
+                foreignField: "CampaignId",
+                as: "conversions"
+            }
+        },
+        {
+            $unwind: {
+                path: "$Actions",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+
+        {
+            $addFields: {
+                totalPayout: {
+                    $sum: {
+                        $map: {
+                            input: "$conversions",
+                            as: "conversion",
+                            in: { $toDouble: "$$conversion.Payout" }
+                        }
+                    }
+                }
+            }
+        },
+
+
         {
             $lookup: {
                 from: "users",
@@ -167,6 +198,37 @@ export const getUserAssignments = asyncHandler(async (req, res) => {
                 preserveNullAndEmptyArrays: true
             }
         },
+
+        {
+            $lookup: {
+                from: "Actions",
+                localField: "trackingLinkId.ProgramId",
+                foreignField: "CampaignId",
+                as: "conversions"
+            }
+        },
+        {
+            $unwind: {
+                path: "$Actions",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+
+        {
+            $addFields: {
+                totalPayout: {
+                    $sum: {
+                        $map: {
+                            input: "$conversions",
+                            as: "conversion",
+                            in: { $toDouble: "$$conversion.Payout" }
+                        }
+                    }
+                }
+            }
+        },
+
+
         {
             $lookup: {
                 from: "users",
@@ -272,6 +334,36 @@ export const getAssignmentsByUserId = asyncHandler(async (req, res) => {
                 preserveNullAndEmptyArrays: true
             }
         },
+
+        {
+            $lookup: {
+                from: "Actions",
+                localField: "trackingLinkId.ProgramId",
+                foreignField: "CampaignId",
+                as: "conversions"
+            }
+        },
+        {
+            $unwind: {
+                path: "$Actions",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+
+        {
+            $addFields: {
+                totalPayout: {
+                    $sum: {
+                        $map: {
+                            input: "$conversions",
+                            as: "conversion",
+                            in: { $toDouble: "$$conversion.Payout" }
+                        }
+                    }
+                }
+            }
+        },
+
         {
             $lookup: {
                 from: "users",
@@ -332,6 +424,7 @@ export const getAssignmentsByUserId = asyncHandler(async (req, res) => {
                 totalClicks: { $size: "$Clicks" }
             }
         },
+
         {
             $project: {
                 Clicks: 0,
