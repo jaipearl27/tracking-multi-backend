@@ -19,7 +19,8 @@ const AssignmentsSchema = new mongoose.Schema(
         },
         inactiveDate: {
             type: Date,
-            required: false
+            required: false,
+            default: null
         },
         platform: {
             type: String,

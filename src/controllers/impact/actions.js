@@ -2,7 +2,7 @@ import ActionModel from "../../models/impact/actions.js";
 import { asyncHandler } from "../../utils/errors/asyncHandler.js";
 
 export const addAction = asyncHandler(async (req, res, next) => {
-    const data = await ActionModel.create(req?.body)
+    const data = await ActionModel.insertMany(req?.body)
     res.status(200).json({ data: data })
 })
 

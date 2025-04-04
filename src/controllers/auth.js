@@ -1,5 +1,3 @@
-
-
 import dotnev from "dotenv";
 import User from "../models/users.js";
 import { asyncHandler } from "../utils/errors/asyncHandler.js";
