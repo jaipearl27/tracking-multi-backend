@@ -4,6 +4,8 @@ import { asyncHandler } from "../utils/errors/asyncHandler.js";
 import ApiErrorResponse from "../utils/errors/apiErrorResponse.js";
 import otpModel from "../models/otp.js";
 import { sendOtpMail } from "../utils/mail.js";
+import jwt from "jsonwebtoken";
+import { COOKIE_OPTIONS } from "../utils/cookie.js";
 
 dotnev.config();
 
@@ -54,6 +56,13 @@ export const login = asyncHandler(async (req, res, next) => {
   existingUser.token = token;
   await existingUser.save({ validateBeforeSave: false });
 
+
+  res.cookie("access_token", token, {
+    httpOnly: true,
+    secure: process?.env?.ENVIRONMENT === "production" ? true : false,
+    sameSite: process?.env?.ENVIRONMENT === "production" ? "none" : "lax"
+  });
+
   res.status(200).json({
     success: true,
     message: "Logged in successfully.",
@@ -80,8 +89,8 @@ export const logout = asyncHandler(async (req, res, next) => {
 
 
     res
-      // .cookie("access_token", "", { ...COOKIE_OPTIONS, maxAge: 0 })
-      // .cookie("refresh_token", "", { ...COOKIE_OPTIONS, maxAge: 0 })
+      .cookie("access_token", "", { ...COOKIE_OPTIONS, maxAge: 0 })
+      .cookie("refresh_token", "", { ...COOKIE_OPTIONS, maxAge: 0 })
       .status(200)
       .json({ success: true, message: "Logout successfully!" });
   } catch (error) {
@@ -165,4 +174,25 @@ export const verifyOtpAndResetPassword = asyncHandler(async (req, res, next) => 
   })
 })
 
+
+export const tokenVerification = asyncHandler(async (req, res) => {
+    const token = req.cookies.access_token;
+
+    console.log(req.cookies, 'token++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+
+    // Check if token exist
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+  
+    try {
+      const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
+      console.log('decoded', decoded)
+      return res.json(decoded);
+    } catch (err) {
+      console.error(err);
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+  } 
+)
 
