@@ -341,7 +341,85 @@ export const getActionsForUser = asyncHandler(async (req, res, next) => {
                 preserveNullAndEmptyArrays: true
             }
         },
+        // 
 
+        {
+            $facet: {
+              documents: [
+                {
+                  $addFields: {
+                    assignedPayout: {
+                      $cond: {
+                        if: { $ifNull: ["$Assignment.commissionPercentage", false] },
+                        then: {
+                          $round: [
+                            {
+                              $multiply: [
+                                { $toDouble: "$Payout" },
+                                { $divide: ["$Assignment.commissionPercentage", 100] }
+                              ]
+                            },
+                            2
+                          ]
+                        },
+                        else: 0
+                      }
+                    }
+                  }
+                },
+                {
+                  $lookup: {
+                    from: "users",
+                    foreignField: "_id",
+                    localField: "Assignment.userId",
+                    as: 'user'
+                  }
+                },
+                {
+                  $unwind: {
+                    path: "$user",
+                    preserveNullAndEmptyArrays: true
+                  }
+                }
+              ],
+              summary: [
+                {
+                  $addFields: {
+                    assignedPayout: {
+                      $cond: {
+                        if: { $ifNull: ["$Assignment.commissionPercentage", false] },
+                        then: {
+                          $round: [
+                            {
+                              $multiply: [
+                                { $toDouble: "$Payout" },
+                                { $divide: ["$Assignment.commissionPercentage", 100] }
+                              ]
+                            },
+                            2
+                          ]
+                        },
+                        else: 0
+                      }
+                    }
+                  }
+                },
+                {
+                  $group: {
+                    _id: "$State",
+                    totalAssignedPayout: { $sum: "$assignedPayout" }
+                  }
+                },
+                {
+                  $project: {
+                    _id: 0,
+                    State: "$_id",
+                    totalAssignedPayout: 1
+                  }
+                }
+              ]
+            }
+          }
     ]
 
     const data = await ActionModel.aggregate(pipeline)
