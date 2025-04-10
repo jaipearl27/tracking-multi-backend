@@ -182,7 +182,7 @@ export const tokenVerification = asyncHandler(async (req, res) => {
 
     // Check if token exist
     if (!token) {
-      return res.status(401).json({ message: 'Unauthorized' });
+      return res.status(200).json({ status: false, message: 'Unauthorized' });
     }
   
     try {

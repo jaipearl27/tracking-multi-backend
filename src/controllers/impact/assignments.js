@@ -50,7 +50,6 @@ export const getAssignmentById = asyncHandler(async (req, res) => {
     res.status(200).json(assignment);
 });
 
-
 // uses same/similar aggregation pipelines:
 
 export const getAssignmentsByTrackingLinkId = asyncHandler(async (req, res) => {
@@ -171,10 +170,8 @@ export const getAssignmentsByTrackingLinkId = asyncHandler(async (req, res) => {
     res.status(200).json(assignments);
 });
 
-
-
 export const getUserAssignments = asyncHandler(async (req, res) => {
-    console.log("req?.user", req?.user)
+    // console.log("req?.user", req?.user)
 
     // const assignments = await Assignments.find({ trackingLinkId: trackingLinkId }).populate('trackingLinkId userId');
 
@@ -308,8 +305,6 @@ export const getUserAssignments = asyncHandler(async (req, res) => {
 });
 
 export const getAssignmentsByUserId = asyncHandler(async (req, res) => {
-
-
     const { id } = req?.params
 
     if (!id) res.status(400).json({ status: false, message: "User Id not provided." })
@@ -443,6 +438,8 @@ export const getAssignmentsByUserId = asyncHandler(async (req, res) => {
 
     res.status(200).json(assignments);
 });
+
+
 
 
 // uses same/similar aggregation pipelines ends
