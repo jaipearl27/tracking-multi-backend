@@ -1,6 +1,8 @@
+const isProduction = process.env.ENVIRONMENT === "production";
+
 export const COOKIE_OPTIONS = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // send cookie over HTTPS only in production
-    sameSite: "lax", // or 'strict' if you want tighter CSRF protection
-    path: "/", // accessible across the whole app
-  };
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "lax" : "none", // "none" for dev to allow cross-site cookies
+  path: "/"
+};

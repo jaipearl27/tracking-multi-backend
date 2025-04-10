@@ -60,7 +60,7 @@ export const login = asyncHandler(async (req, res, next) => {
   res.cookie("access_token", token, {
     httpOnly: true,
     secure: process?.env?.ENVIRONMENT === "production" ? true : false,
-    sameSite: process?.env?.ENVIRONMENT === "production" ? "none" : "lax"
+    sameSite: process?.env?.ENVIRONMENT === "production" ? "lax" : "none"
   });
 
   res.status(200).json({
