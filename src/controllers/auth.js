@@ -57,16 +57,11 @@ export const login = asyncHandler(async (req, res, next) => {
   await existingUser.save({ validateBeforeSave: false });
 
 
-  res.cookie("access_token", token, {
-    httpOnly: true,
-    secure: process?.env?.ENVIRONMENT === "production" ? true : false,
-    sameSite: process?.env?.ENVIRONMENT === "production" ? "lax" : "none"
-  });
+  res.cookie("access_token", token, {...COOKIE_OPTIONS});
 
   res.status(200).json({
     success: true,
     message: "Logged in successfully.",
-    token, // Send token
     role: existingUser.role, // Send role
   });
 });
