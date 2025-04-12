@@ -101,7 +101,7 @@ export const scheduleClickExport = async (programId = undefined, date = undefine
 
             const data = await downloadClickExport(checkStatusResponse?.ResultUri);
 
-
+            if(!data?.Clicks) console.log("Clicks data not found will try later, here the data we got:", data)
 
             const clickEvents = data?.Clicks.map(click => {
 
