@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken";
 
 export const authenticateToken = asyncHandler(async (req, res, next) => {
 
-  console.log('req.headers', req.headers)
+  // console.log('req.headers', req.headers)
 
   const token =
     req?.cookies?.access_token ||

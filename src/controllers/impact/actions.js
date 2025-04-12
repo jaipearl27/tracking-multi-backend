@@ -2,12 +2,28 @@ import mongoose from "mongoose";
 import ActionModel from "../../models/impact/actions.js";
 import { asyncHandler } from "../../utils/errors/asyncHandler.js";
 
+import chalk from "chalk"
+
 export const addAction = asyncHandler(async (req, res, next) => {
     const data = await ActionModel.insertMany(req?.body)
     res.status(200).json({ data: data })
 })
 
 export const getActions = asyncHandler(async (req, res, next) => {
+
+    console.log(req?.query)
+
+    let {userId} = req?.query
+
+    // console.log(chalk.red.bgWhite('userId', userId))
+
+    if(req?.user?.role && req?.user?.role !== "ADMIN"){
+        userId = req?.user?._id
+    }
+
+
+//    console.log(chalk.blue.bgWhite('userId', userId))
+    
 
     const pipeline = [
         {
@@ -61,8 +77,14 @@ export const getActions = asyncHandler(async (req, res, next) => {
             }
         },
 
-
-
+        ...(userId ? [{
+            $match: {
+                $expr: {
+                    $eq: ["$Assignment.userId", new mongoose.Types.ObjectId(`${userId}`)]
+                }
+            }
+        }]:[]),
+    
         {
             $addFields: {
                 assignedPayout: {
@@ -99,6 +121,89 @@ export const getActions = asyncHandler(async (req, res, next) => {
                 preserveNullAndEmptyArrays: true
             }
         },
+      
+
+        {
+            $facet: {
+                documents: [
+                {
+                    $addFields: {
+                    assignedPayout: {
+                        $cond: {
+                        if: { $ifNull: ["$Assignment.commissionPercentage", false] },
+                        then: {
+                            $round: [
+                            {
+                                $multiply: [
+                                { $toDouble: "$Payout" },
+                                { $divide: ["$Assignment.commissionPercentage", 100] }
+                                ]
+                            },
+                            2
+                            ]
+                        },
+                        else: 0
+                        }
+                    }
+                    }
+                },
+                {
+                    $lookup: {
+                    from: "users",
+                    foreignField: "_id",
+                    localField: "Assignment.userId",
+                    as: 'user'
+                    }
+                },
+                {
+                    $unwind: {
+                    path: "$user",
+                    preserveNullAndEmptyArrays: true
+                    }
+                }
+                ],
+                summary: [
+                {
+                    $addFields: {
+                    assignedPayout: {
+                        $cond: {
+                        if: { $ifNull: ["$Assignment.commissionPercentage", false] },
+                        then: {
+                            $round: [
+                            {
+                                $multiply: [
+                                { $toDouble: "$Payout" },
+                                { $divide: ["$Assignment.commissionPercentage", 100] }
+                                ]
+                            },
+                            2
+                            ]
+                        },
+                        else: 0
+                        },
+                    },
+                    trimmedState: {
+                        $trim: { input: "$State" }
+                    }
+                    }
+                },
+                {
+                    $group: {
+                    _id: "$trimmedState",
+                    totalAssignedPayout: { $sum: "$assignedPayout" }
+                    }
+                },
+                {$sort: {_id: 1}},
+                {
+                    $project: {
+                    _id: 0,
+                    State: "$_id",
+                    totalAssignedPayout: 1
+                    }
+                }
+                ]
+            }
+        }
 
     ]
 

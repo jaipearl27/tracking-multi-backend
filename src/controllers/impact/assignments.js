@@ -3,6 +3,10 @@ import Assignments from "../../models/impact/assignments.js";
 import { asyncHandler } from "../../utils/errors/asyncHandler.js";
 
 export const createAssignment = asyncHandler(async (req, res) => {
+
+    console.log('req.body', req.body)
+
+
     let { trackingLinkId, userId, commissionPercentage, platform } = req.body;
 
     if (!trackingLinkId || !userId || !commissionPercentage || !platform) {
@@ -33,7 +37,7 @@ export const createAssignment = asyncHandler(async (req, res) => {
 
     const assignment = await Assignments.create({ trackingLinkId, userId, commissionPercentage, platform });
 
-    res.status(201).json(assignment);
+    return res.status(200).json({assignment, message: 'Assignment made successfully!'});
 });
 
 export const getAssignments = asyncHandler(async (req, res) => {

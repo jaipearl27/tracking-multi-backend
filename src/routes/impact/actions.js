@@ -4,7 +4,7 @@ import { authenticateToken } from "../../middlewares/authenticateToken.js"
 
 const actionsRouter = express.Router()
 
-actionsRouter.route('/').get(getActions).post(addAction)
+actionsRouter.route('/').get(authenticateToken, getActions).post(addAction)
 actionsRouter.route('/user').get(authenticateToken, getActionsForUser)
 actionsRouter.route('/user/:id').get(getActionsByUserId)
 actionsRouter.route('/campaign/:id').get(getActionsByCampaignId)
