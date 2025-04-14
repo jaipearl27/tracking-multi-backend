@@ -13,7 +13,22 @@ export const getActions = asyncHandler(async (req, res, next) => {
 
     console.log(req?.query)
 
-    let {userId} = req?.query
+    let {
+        userId,
+        minPayout, 
+        maxPayout,
+        minEventDate,
+        maxEventDate,
+        programName,
+        programId,
+        email,
+        trackingLink,
+        state,
+    } = req?.query
+
+
+    
+
 
     // console.log(chalk.red.bgWhite('userId', userId))
 
@@ -26,6 +41,45 @@ export const getActions = asyncHandler(async (req, res, next) => {
     
 
     const pipeline = [
+
+        //date filter
+
+        ...(minEventDate || maxEventDate ? [
+            {
+                $match: {
+                    EventDate: {
+                        ...(minEventDate ? { $gte: new Date(minEventDate) } : {}),
+                        ...(maxEventDate ? { $lte: new Date(maxEventDate) } : {})
+                    }
+                }
+            }
+        ] : []),
+
+        ...(programName ? [
+            {
+                $match: {
+                    CampaignName: programName
+                }
+            }
+        ] : []),
+
+        ...(programId ? [
+            {
+                $match: {
+                    CampaignId: programId
+                }
+            }
+        ] : []),
+
+        ...(state ? [
+            {
+                $match: {
+                    State: state
+                }
+            }
+        ] : []),
+
+
         {
             $lookup: {
                 from: "TrackingLinks",
@@ -40,6 +94,16 @@ export const getActions = asyncHandler(async (req, res, next) => {
                 preserveNullAndEmptyArrays: true
             }
         },
+
+        ...(trackingLink ? [
+            {
+                $match: {
+                  "TrackingLink.TrackingLink": trackingLink
+                }
+              },
+        ] : []),
+
+
         {
             $lookup: {
                 from: "Assignments",
@@ -107,6 +171,19 @@ export const getActions = asyncHandler(async (req, res, next) => {
             }
         },
 
+        // assignedPayout filter
+
+        ...(minPayout || maxPayout ? [
+            {
+                $match: {
+                    assignedPayout: {
+                        ...(minPayout ? { $gte: Number(minPayout) } : {}),
+                        ...(maxPayout ? { $lte: Number(maxPayout) } : {})
+                    }
+                }
+            }
+        ] : []),
+
         {
             $lookup: {
                 from: "users",
@@ -122,6 +199,17 @@ export const getActions = asyncHandler(async (req, res, next) => {
             }
         },
       
+
+        //user filters
+        
+        ...(email ? [
+            {
+                $match: {
+                  "user.email": email
+                }
+              },
+        ] : []),
+
 
         {
             $facet: {
@@ -206,6 +294,8 @@ export const getActions = asyncHandler(async (req, res, next) => {
         }
 
     ]
+
+    // console.log(JSON.stringify(pipeline))
 
     const data = await ActionModel.aggregate(pipeline)
     res.status(200).json({ data: data })
