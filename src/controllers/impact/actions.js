@@ -36,9 +36,11 @@ export const getActions = asyncHandler(async (req, res, next) => {
         userId = req?.user?._id
     }
 
+    // converting minEventDate to start of the day time 
+    minEventDate = new Date(minEventDate).setHours(0,0,0,0)
 
-//    console.log(chalk.blue.bgWhite('userId', userId))
-    
+    // converting maxEventDate to end of day time
+    maxEventDate = new Date(maxEventDate).setHours(23, 59, 59, 999)
 
     const pipeline = [
 
@@ -48,7 +50,7 @@ export const getActions = asyncHandler(async (req, res, next) => {
             {
                 $match: {
                     EventDate: {
-                        ...(minEventDate ? { $gte: new Date(minEventDate) } : {}),
+                        ...(minEventDate ? { $gte: new Date(minEventDate)  } : {}),
                         ...(maxEventDate ? { $lte: new Date(maxEventDate) } : {})
                     }
                 }
