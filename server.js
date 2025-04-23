@@ -16,6 +16,7 @@ import assignmentsRouter from "./src/routes/impact/assignments.js"
 import actionsRouter from "./src/routes/impact/actions.js"
 import cookieParser from "cookie-parser"
 import { tokenVerification } from "./src/controllers/auth.js"
+import partnerizeTrackingLinkRouter from "./src/routes/partnerize/TrackingLinks.js"
 
 
 dotenv.config()
@@ -62,7 +63,7 @@ app.use('/api/v1/actions', actionsRouter)
 
 
 // routes v2 for partnerize
-
+app.use('/api/v2/trackingLinks', partnerizeTrackingLinkRouter)
 
 app.use(error);
 

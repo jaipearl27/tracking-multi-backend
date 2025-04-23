@@ -1,15 +1,25 @@
 import cron from "node-cron";
 import { scheduleClickExport } from "../controllers/impact/clicks.js";
 import chalk from "chalk"
+import { fetchTrackingLinks } from "../controllers/partnerize/TrackingLinks.js";
 
-const task = () => {
-    chalk.bgWhite.blackBright('running cron job for impact click export', new Date().toISOString());
+const impactClicksTask = () => {
+    console.log(chalk.bgWhite.blackBright('running cron job for impact click export', new Date().toISOString()))
     scheduleClickExport();
 }
 
 const impactDataTask = () => {
-    chalk.bgWhite('Running CRON Job for getting actions data')
+    console.log(chalk.bgWhite('Running CRON Job for getting actions data'))
 }
 
-cron.schedule('*/5 * * * *', task) //cron job to run every 5 minutes
+
+// partnerize:
+
+const partnerizeLinksTask = () => {
+    console.log(chalk.bgWhite.blackBright('running cron job for PARTNERIZE Links', new Date().toISOString()))
+    fetchTrackingLinks()
+}
+
+cron.schedule('*/1 * * * *', partnerizeLinksTask)
+cron.schedule('*/5 * * * *', impactClicksTask) //cron job to run every 5 minutes
 cron.schedule('*/30 * * * *', impactDataTask)

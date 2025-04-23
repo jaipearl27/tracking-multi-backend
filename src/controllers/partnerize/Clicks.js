@@ -1,0 +1,1 @@
+// https://api.partnerize.com/reporting/report_publisher/publisher/1100l286361/click.json
