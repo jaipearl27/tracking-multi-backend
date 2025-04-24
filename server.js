@@ -60,8 +60,6 @@ app.use('/api/v1/clicks', clicksRouter)
 app.use('/api/v1/assignments', assignmentsRouter)
 app.use('/api/v1/actions', actionsRouter)
 
-
-
 // routes v2 for partnerize
 app.use('/api/v2/trackingLinks', partnerizeTrackingLinkRouter)
 

@@ -53,7 +53,7 @@ export const fetchTrackingLinks = async () => {
 const builkWriteToDB = async (data) => {
 
     if(Array.isArray(data) && data?.length <= 0) {
-        console.log(chalk.bgRedBright('Data is not an ARRAY or is an EMPTY ARRAT.'))
+        console.log(chalk.bgRedBright('Data is not an ARRAY or is an EMPTY ARRAY.'))
     }
 
 
@@ -135,17 +135,17 @@ export const addTrackingLinkToDB = asyncHandler(async (req, res, next) => {
     res.status(201).json({ success: true, message: "Tracking link added successfully", tracking });
 });
 
-export const getTrackingLinkByProgramId = asyncHandler(async (req, res, next) => {
-    const { ProgramId } = req.params;
+export const getTrackingLinkByCampaignId = asyncHandler(async (req, res, next) => {
+    const { campaign_id } = req.params;
 
-    if (!ProgramId) {
-        return res.status(400).json({ success: false, message: "ProgramId is required" });
+    if (!campaign_id) {
+        return res.status(400).json({ success: false, message: "CampaignId is required" });
     }
 
-    const trackingLinks = await TrackingLinks.find({ ProgramId: ProgramId });
+    const trackingLinks = await PartnerizeTrackingLink.find({ campaign_id: campaign_id });
 
     if (!trackingLinks) {
-        return res.status(404).json({ success: false, message: "Tracking link not found for this program" });
+        return res.status(404).json({ success: false, message: "Tracking link not found for this Campaign" });
     }
 
     res.status(200).json({ success: true, trackingLinks });
@@ -156,4 +156,13 @@ export const getTrackingLinks = asyncHandler(async (req, res) => {
     const result = await PartnerizeTrackingLink.find({})
 
     res.status(200).json({data: result})
+})
+
+
+export const deleteTrackingLink = asyncHandler(async (req, res) => {
+    const {id} = req?.params
+    if(!id) return res.status(500).json({status: false, message: "ID not provided"})
+
+    const result = PartnerizeTrackingLink.findByIdAndDelete(id)
+    return res.status(200).json({message: "Link deleted successfully", result})
 })
