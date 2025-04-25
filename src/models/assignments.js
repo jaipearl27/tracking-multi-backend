@@ -5,7 +5,15 @@ const AssignmentsSchema = new mongoose.Schema(
         trackingLinkId: {
             type: mongoose.Types.ObjectId,
             ref: "TrackingLinks",
-            required: [true, "Tracking link ID is required"],
+            required: function () {
+                return this.platform === 'impact';
+              },
+        },
+        campaign_id: {
+            type: String,
+            required: function() {
+                return this.platform === 'partnerize';
+            },
         },
         userId: {
             type: mongoose.Types.ObjectId,
@@ -24,7 +32,7 @@ const AssignmentsSchema = new mongoose.Schema(
         },
         platform: {
             type: String,
-            required: true,
+            required: [true, 'Platform type is required'],
             enums: ['impact', 'partnerize']
         },
         commissionPercentage: {

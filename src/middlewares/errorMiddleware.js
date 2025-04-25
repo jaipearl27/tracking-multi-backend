@@ -19,13 +19,13 @@ export const error = (err, req, res, next) => {
 
     // wrong jwt error
     if (err.name === "JsonWebTokenError") {
-        const message = `Your url is invalid please try again letter`;
+        const message = `Your token is invalid please try again letter`;
         err = new ApiErrorResponse(message, 400);
     }
 
     // jwt expired
     if (err.name === "TokenExpiredError") {
-        const message = `Your Url is expired please try again letter!`;
+        const message = `Your token is expired, please login and try again later!`;
         err = new ApiErrorResponse(message, 400);
     }
 

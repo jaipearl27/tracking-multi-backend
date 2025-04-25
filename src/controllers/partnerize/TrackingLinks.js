@@ -32,7 +32,7 @@ export const fetchTrackingLinks = async () => {
 
         const data = await response.json();
 
-        console.log(`================data==================`, data?.links)
+        // console.log(`================data==================`, data?.links)
 
         if(data?.links){
             await builkWriteToDB(data?.links)

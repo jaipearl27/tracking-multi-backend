@@ -2,12 +2,42 @@ import mongoose from "mongoose";
 
 import { asyncHandler } from "../../utils/errors/asyncHandler.js";
 
-import chalk from "chalk"
+// import chalk from "chalk"
 import ConversionModel from "../../models/partnerize/conversions.js";
 
 export const addConversion = asyncHandler(async (req, res, next) => {
-    const data = await ConversionModel.insertMany(req?.body)
-    res.status(200).json({ data: data })
+
+    const data = req?.body
+
+    if (!Array.isArray(data)) return res.status(500).json({ message: 'data is not in correct Array format' })
+
+    if (data?.length <= 0) return res.status(500).json({ message: "Data is empty" })
+
+
+
+    const formattedData = data?.map((item) => {
+        if (item?.conversion_data) {
+
+            // Ensure set_time is stored as a Date
+            if (item.conversion_data?.conversion_time && typeof item.conversion_data?.conversion_time === "string") {
+
+                const splitDateTime = item.conversion_data?.conversion_time.split(" ")
+                item.conversion_data.conversion_time = new Date(`${splitDateTime[0]}T${splitDateTime[1]}Z`) //Ensuring that UTC string '2025-04-25 05:56:31' stays in UTC format
+            }
+
+            return {
+                updateOne: {
+                    filter: item.conversion_data,
+                    update: { $set: item.conversion_data },
+                    upsert: true
+                }
+            }
+        }
+    });
+
+
+    const result = await ConversionModel.bulkWrite(formattedData)
+    res.status(200).json({ data: result })
 })
 
 export const getConversions = asyncHandler(async (req, res, next) => {
@@ -16,7 +46,7 @@ export const getConversions = asyncHandler(async (req, res, next) => {
 
     let {
         userId,
-        minPayout, 
+        minPayout,
         maxPayout,
         minEventDate,
         maxEventDate,
@@ -28,17 +58,17 @@ export const getConversions = asyncHandler(async (req, res, next) => {
     } = req?.query
 
 
-    
+
 
 
     // console.log(chalk.red.bgWhite('userId', userId))
 
-    if(req?.user?.role && req?.user?.role !== "ADMIN"){
+    if (req?.user?.role && req?.user?.role !== "ADMIN") {
         userId = req?.user?._id
     }
 
     // converting minEventDate to start of the day time 
-    minEventDate = new Date(minEventDate).setHours(0,0,0,0)
+    minEventDate = new Date(minEventDate).setHours(0, 0, 0, 0)
 
     // converting maxEventDate to end of day time
     maxEventDate = new Date(maxEventDate).setHours(23, 59, 59, 999)
@@ -51,7 +81,7 @@ export const getConversions = asyncHandler(async (req, res, next) => {
             {
                 $match: {
                     EventDate: {
-                        ...(minEventDate ? { $gte: new Date(minEventDate)  } : {}),
+                        ...(minEventDate ? { $gte: new Date(minEventDate) } : {}),
                         ...(maxEventDate ? { $lte: new Date(maxEventDate) } : {})
                     }
                 }
@@ -101,9 +131,9 @@ export const getConversions = asyncHandler(async (req, res, next) => {
         ...(trackingLink ? [
             {
                 $match: {
-                  "TrackingLink.TrackingLink": trackingLink
+                    "TrackingLink.TrackingLink": trackingLink
                 }
-              },
+            },
         ] : []),
 
 
@@ -150,8 +180,8 @@ export const getConversions = asyncHandler(async (req, res, next) => {
                     $eq: ["$Assignment.userId", new mongoose.Types.ObjectId(`${userId}`)]
                 }
             }
-        }]:[]),
-    
+        }] : []),
+
         {
             $addFields: {
                 assignedPayout: {
@@ -201,97 +231,97 @@ export const getConversions = asyncHandler(async (req, res, next) => {
                 preserveNullAndEmptyArrays: true
             }
         },
-      
+
 
         //user filters
-        
+
         ...(email ? [
             {
                 $match: {
-                  "user.email": email
+                    "user.email": email
                 }
-              },
+            },
         ] : []),
 
 
         {
             $facet: {
                 documents: [
-                {
-                    $addFields: {
-                    assignedPayout: {
-                        $cond: {
-                        if: { $ifNull: ["$Assignment.commissionPercentage", false] },
-                        then: {
-                            $round: [
-                            {
-                                $multiply: [
-                                { $toDouble: "$Payout" },
-                                { $divide: ["$Assignment.commissionPercentage", 100] }
-                                ]
-                            },
-                            2
-                            ]
-                        },
-                        else: 0
+                    {
+                        $addFields: {
+                            assignedPayout: {
+                                $cond: {
+                                    if: { $ifNull: ["$Assignment.commissionPercentage", false] },
+                                    then: {
+                                        $round: [
+                                            {
+                                                $multiply: [
+                                                    { $toDouble: "$Payout" },
+                                                    { $divide: ["$Assignment.commissionPercentage", 100] }
+                                                ]
+                                            },
+                                            2
+                                        ]
+                                    },
+                                    else: 0
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "users",
+                            foreignField: "_id",
+                            localField: "Assignment.userId",
+                            as: 'user'
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$user",
+                            preserveNullAndEmptyArrays: true
                         }
                     }
-                    }
-                },
-                {
-                    $lookup: {
-                    from: "users",
-                    foreignField: "_id",
-                    localField: "Assignment.userId",
-                    as: 'user'
-                    }
-                },
-                {
-                    $unwind: {
-                    path: "$user",
-                    preserveNullAndEmptyArrays: true
-                    }
-                }
                 ],
                 summary: [
-                {
-                    $addFields: {
-                    assignedPayout: {
-                        $cond: {
-                        if: { $ifNull: ["$Assignment.commissionPercentage", false] },
-                        then: {
-                            $round: [
-                            {
-                                $multiply: [
-                                { $toDouble: "$Payout" },
-                                { $divide: ["$Assignment.commissionPercentage", 100] }
-                                ]
+                    {
+                        $addFields: {
+                            assignedPayout: {
+                                $cond: {
+                                    if: { $ifNull: ["$Assignment.commissionPercentage", false] },
+                                    then: {
+                                        $round: [
+                                            {
+                                                $multiply: [
+                                                    { $toDouble: "$Payout" },
+                                                    { $divide: ["$Assignment.commissionPercentage", 100] }
+                                                ]
+                                            },
+                                            2
+                                        ]
+                                    },
+                                    else: 0
+                                },
                             },
-                            2
-                            ]
-                        },
-                        else: 0
-                        },
+                            trimmedState: {
+                                $trim: { input: "$State" }
+                            }
+                        }
                     },
-                    trimmedState: {
-                        $trim: { input: "$State" }
+                    {
+                        $group: {
+                            _id: "$trimmedState",
+                            totalAssignedPayout: { $sum: "$assignedPayout" }
+                        }
+                    },
+                    { $sort: { _id: 1 } },
+                    {
+                        $project: {
+                            _id: 0,
+                            State: "$_id",
+                            totalAssignedPayout: 1
+                        }
                     }
-                    }
-                },
-                {
-                    $group: {
-                    _id: "$trimmedState",
-                    totalAssignedPayout: { $sum: "$assignedPayout" }
-                    }
-                },
-                {$sort: {_id: 1}},
-                {
-                    $project: {
-                    _id: 0,
-                    State: "$_id",
-                    totalAssignedPayout: 1
-                    }
-                }
                 ]
             }
         }
@@ -440,7 +470,7 @@ export const getConversionsByUserId = asyncHandler(async (req, res, next) => {
 
 export const getConversionsForUser = asyncHandler(async (req, res, next) => {
 
-    
+
 
     const pipeline = [
         {
@@ -543,81 +573,81 @@ export const getConversionsForUser = asyncHandler(async (req, res, next) => {
 
         {
             $facet: {
-              documents: [
-                {
-                  $addFields: {
-                    assignedPayout: {
-                      $cond: {
-                        if: { $ifNull: ["$Assignment.commissionPercentage", false] },
-                        then: {
-                          $round: [
-                            {
-                              $multiply: [
-                                { $toDouble: "$Payout" },
-                                { $divide: ["$Assignment.commissionPercentage", 100] }
-                              ]
-                            },
-                            2
-                          ]
-                        },
-                        else: 0
-                      }
+                documents: [
+                    {
+                        $addFields: {
+                            assignedPayout: {
+                                $cond: {
+                                    if: { $ifNull: ["$Assignment.commissionPercentage", false] },
+                                    then: {
+                                        $round: [
+                                            {
+                                                $multiply: [
+                                                    { $toDouble: "$Payout" },
+                                                    { $divide: ["$Assignment.commissionPercentage", 100] }
+                                                ]
+                                            },
+                                            2
+                                        ]
+                                    },
+                                    else: 0
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "users",
+                            foreignField: "_id",
+                            localField: "Assignment.userId",
+                            as: 'user'
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$user",
+                            preserveNullAndEmptyArrays: true
+                        }
                     }
-                  }
-                },
-                {
-                  $lookup: {
-                    from: "users",
-                    foreignField: "_id",
-                    localField: "Assignment.userId",
-                    as: 'user'
-                  }
-                },
-                {
-                  $unwind: {
-                    path: "$user",
-                    preserveNullAndEmptyArrays: true
-                  }
-                }
-              ],
-              summary: [
-                {
-                  $addFields: {
-                    assignedPayout: {
-                      $cond: {
-                        if: { $ifNull: ["$Assignment.commissionPercentage", false] },
-                        then: {
-                          $round: [
-                            {
-                              $multiply: [
-                                { $toDouble: "$Payout" },
-                                { $divide: ["$Assignment.commissionPercentage", 100] }
-                              ]
-                            },
-                            2
-                          ]
-                        },
-                        else: 0
-                      }
+                ],
+                summary: [
+                    {
+                        $addFields: {
+                            assignedPayout: {
+                                $cond: {
+                                    if: { $ifNull: ["$Assignment.commissionPercentage", false] },
+                                    then: {
+                                        $round: [
+                                            {
+                                                $multiply: [
+                                                    { $toDouble: "$Payout" },
+                                                    { $divide: ["$Assignment.commissionPercentage", 100] }
+                                                ]
+                                            },
+                                            2
+                                        ]
+                                    },
+                                    else: 0
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: "$State",
+                            totalAssignedPayout: { $sum: "$assignedPayout" }
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 0,
+                            State: "$_id",
+                            totalAssignedPayout: 1
+                        }
                     }
-                  }
-                },
-                {
-                  $group: {
-                    _id: "$State",
-                    totalAssignedPayout: { $sum: "$assignedPayout" }
-                  }
-                },
-                {
-                  $project: {
-                    _id: 0,
-                    State: "$_id",
-                    totalAssignedPayout: 1
-                  }
-                }
-              ]
+                ]
             }
-          }
+        }
     ]
 
     const data = await ConversionModel.aggregate(pipeline)

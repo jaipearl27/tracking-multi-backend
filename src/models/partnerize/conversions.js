@@ -33,7 +33,7 @@ ConversionSchema.pre("insertMany", function (next, docs) {
 });
 
 
-const ConversionModel = mongoose.model("PartnerizeConversion", ConversionSchema, "PartnerizeConversion");
+const ConversionModel = mongoose.model("PartnerizeConversions", ConversionSchema, "PartnerizeConversions");
 
 export default ConversionModel;
 

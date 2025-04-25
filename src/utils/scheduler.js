@@ -26,7 +26,7 @@ const partnerizeClicksTask = () => {
     fetchPartnerizeClicks()
 }
 
-cron.schedule('*/1 * * * *', partnerizeLinksTask) //cron job to run every minute
-cron.schedule('*/1 * * * *', partnerizeClicksTask) //cron job to run every minute
-cron.schedule('*/5 * * * *', impactClicksTask) //cron job to run every 5 minutes
+cron.schedule('*/1 * * * *', partnerizeLinksTask) //cron job to run every 5 minute
+cron.schedule('*/1 * * * *', partnerizeClicksTask) //cron job to run every 5 minutes
+cron.schedule('*/1 * * * *', impactClicksTask) //cron job to run every 5 minutes
 cron.schedule('*/30 * * * *', impactDataTask) //cron job to run every 30 minutes

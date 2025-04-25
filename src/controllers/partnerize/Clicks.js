@@ -2,6 +2,7 @@
 
 import chalk from "chalk";
 import PartnerizeClickEventModel from "../../models/partnerize/clicks.js";
+import { asyncHandler } from "../../utils/errors/asyncHandler.js";
 
 
 const partnerizePublisherId = process.env.PARTNERIZE_PUBLISHER_ID || '1100l286361'
@@ -13,8 +14,8 @@ export const fetchPartnerizeClicks = async () => {
     try {
 
         //checking size of tracking links in our db to calculate offset
-        const offset = await PartnerizeClickEventModel.countDocuments({})
-        const url = `https://api.partnerize.com/reporting/report_publisher/publisher/${partnerizePublisherId}/click.json${offset > 0 ? `?offset=${offset}` : ""}`;
+        // const offset = await PartnerizeClickEventModel.countDocuments({})
+        const url = `https://api.partnerize.com/reporting/report_publisher/publisher/${partnerizePublisherId}/click.json`; //${offset > 0 ? `?offset=${offset}` : ""}
         console.log('partnerize tracking link url:  ', url)
 
         const headers = {
@@ -29,7 +30,7 @@ export const fetchPartnerizeClicks = async () => {
         }
 
         const data = await response.json();
-        console.log(`================partnerize clicks==================`, data?.clicks)
+        // console.log(`================partnerize clicks==================`, data?.clicks)
 
         if (data?.clicks) {
             await builkWriteToDB(data?.clicks)
@@ -50,9 +51,12 @@ const builkWriteToDB = async (data) => {
     }
     const formattedData = data?.map((item) => {
         if (item?.click) {
+
             // Ensure set_time is stored as a Date
             if (item.click?.set_time && typeof item.click?.set_time === "string") {
-                item.click.set_time = new Date(item.click?.set_time)
+
+                const splitDateTime = item.click?.set_time.split(" ")
+                item.click.set_time = new Date(`${splitDateTime[0]}T${splitDateTime[1]}Z`) //Ensuring that UTC string '2025-04-25 05:56:31' stays in UTC format
             }
 
             return {
@@ -71,3 +75,20 @@ const builkWriteToDB = async (data) => {
     const DBResponse = await PartnerizeClickEventModel.bulkWrite(formattedData);
     console.log(DBResponse)
 }
+
+
+export const getPartnerizeClicks = asyncHandler(async (req, res) => {
+    const { campaign_id } = req.query;
+    const query = {}
+    if (campaign_id) query.campaign_id = campaign_id
+    const clicks = await PartnerizeClickEventModel.find(query).sort({ campaign_id: 1 });
+
+    res.status(200).json({ success: true, message: "Clicks fetched successfully", clicks });
+})
+
+
+export const getClicksCountAsPerCampaignId = asyncHandler(async (req, res) => {
+    const { campaign_id } = req?.params
+    const totalClicks = await PartnerizeClickEventModel.countDocuments({ campaign_id: campaign_id })
+    res.status(200).json({ totalClicks })
+})
