@@ -5,11 +5,11 @@ import { createAssignment, getAssignmentByCampaignId, getAssignmentById, getAssi
 
 const assignmentsRouter = express.Router();
 
-assignmentsRouter.route('/').get(getAssignments).post(createAssignment);
+assignmentsRouter.route('/').get(authenticateToken, getAssignments).post(authenticateToken, createAssignment);
 assignmentsRouter.route('/user').get(authenticateToken, getUserAssignments)
 // assignmentsRouter.route('/user/:id').get(authenticateToken, getAssignmentsByUserId)
-assignmentsRouter.route('/:id').get(getAssignmentById)
-assignmentsRouter.route('/trackingLink/:trackingLinkId').get(getAssignmentsByTrackingLinkId);
-assignmentsRouter.route('/campaign/:campaign_id').get(getAssignmentByCampaignId)
+assignmentsRouter.route('/:id').get(authenticateToken, getAssignmentById)
+assignmentsRouter.route('/trackingLink/:trackingLinkId').get(authenticateToken, getAssignmentsByTrackingLinkId);
+assignmentsRouter.route('/campaign/:campaign_id').get(authenticateToken, getAssignmentByCampaignId)
 
 export default assignmentsRouter;

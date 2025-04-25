@@ -4,10 +4,10 @@ import { authenticateToken } from "../../middlewares/authenticateToken.js"
 
 const actionsRouter = express.Router()
 
-actionsRouter.route('/').get(authenticateToken, getActions).post(addAction)
+actionsRouter.route('/').get(authenticateToken, getActions).post(authenticateToken, addAction)
 actionsRouter.route('/user').get(authenticateToken, getActionsForUser)
-actionsRouter.route('/user/:id').get(getActionsByUserId)
-actionsRouter.route('/campaign/:id').get(getActionsByCampaignId)
-actionsRouter.route('/:id').get(getActionById)
+actionsRouter.route('/user/:id').get(authenticateToken, getActionsByUserId)
+actionsRouter.route('/campaign/:id').get(authenticateToken, getActionsByCampaignId)
+actionsRouter.route('/:id').get(authenticateToken, getActionById)
 
 export default actionsRouter

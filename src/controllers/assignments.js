@@ -20,13 +20,13 @@ export const createAssignment = asyncHandler(async (req, res) => {
     }
 
 
-    if(trackingLinkId){
+    if (trackingLinkId) {
         trackingLinkId = new mongoose.Types.ObjectId(`${trackingLinkId}`)
     }
 
     userId = new mongoose.Types.ObjectId(`${userId}`)
 
-    const assignmentExists = await Assignments.findOne({ ...(platform === 'impact' ? { trackingLinkId:trackingLinkId } : { campaign_id: campaign_id }), status: "active" });
+    const assignmentExists = await Assignments.findOne({ ...(platform === 'impact' ? { trackingLinkId: trackingLinkId } : { campaign_id: campaign_id }), status: "active" });
     console.log(assignmentExists)
 
     if (assignmentExists) {
@@ -41,11 +41,11 @@ export const createAssignment = asyncHandler(async (req, res) => {
         }
     }
 
-    const assignment = await Assignments.create({ 
-        ...(platform === 'impact' ? { trackingLinkId: trackingLinkId } : { campaign_id: campaign_id }), 
-        userId, 
-        commissionPercentage, 
-        platform 
+    const assignment = await Assignments.create({
+        ...(platform === 'impact' ? { trackingLinkId: trackingLinkId } : { campaign_id: campaign_id }),
+        userId,
+        commissionPercentage,
+        platform
     });
 
     // console.log(assignment, 'tetetetetttetittitestiitestitsteddies')
@@ -54,8 +54,8 @@ export const createAssignment = asyncHandler(async (req, res) => {
 });
 
 export const getAssignments = asyncHandler(async (req, res) => {
-    const {status} = req?.query
-    const assignments = await Assignments.find({ ...(status ? {status: status} : {status: "active"}) }).populate('trackingLinkId userId');
+    const { status } = req?.query
+    const assignments = await Assignments.find({ ...(status ? { status: status } : { status: "active" }) }).populate('trackingLinkId userId');
     res.status(200).json(assignments);
 });
 
@@ -159,117 +159,25 @@ export const getAssignmentsByTrackingLinkId = asyncHandler(async (req, res) => {
 
 
 export const getAssignmentByCampaignId = asyncHandler(async (req, res) => {
-    const {campaign_id} = req.params
+    const { campaign_id } = req.params
 
-    if(!campaign_id) return res.status(500).json({message: "campaign_id is required"})
-
-    const pipeline = [
-        {
-          $match: {
-            campaign_id: campaign_id,
-            status: "active"
-          }
-        },
-        {
-          $lookup: {
-            from: "PartnerizeTrackingLinks",
-            localField: "campaign_id",
-            foreignField: "campaign_id",
-            as: "trackingLinks"
-          }
-        },
-        
-        {
-          $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            as: "userId"
-          }
-        },
-        {
-          $unwind: {
-            path: "$userId",
-            preserveNullAndEmptyArrays: true
-          }
-        },
-        {
-          $lookup: {
-            from: "PartnerizeClickEvents",
-            localField: "campaign_id",
-            foreignField: "campaign_id",
-            as: "Clicks"
-          }
-        },
-        {
-          $addFields: {
-            Clicks: {
-              $filter: {
-                input: "$Clicks",
-                as: "click",
-                cond: {
-                  $gte: [
-                    {
-                      $toDate: "$$click.set_time"
-                    },
-                    // Ensure EventDate is a Date
-                    "$createdAt" // createdAt is already a Date
-                  ]
-                }
-              }
-            }
-          }
-        },
-        {
-          $addFields: {
-            totalClicks: {
-              $size: "$Clicks"
-            }
-          }
-        },
-        {
-          $project: {
-            Clicks: 0,
-            "userId.password": 0
-          }
-        }
-    ]
-
-    const assignments = await Assignments.aggregate(pipeline)
-    return res.status(200).json(assignments)
-})
-
-
-export const getUserAssignments = asyncHandler(async (req, res) => {
-
-    let id = req?.user?._id
-
-    if(req?.query?.id) id = req?.query?.id
-
-    if(!id) return res.status(500).message({status: "User ID is required."})
-
+    if (!campaign_id) return res.status(500).json({ message: "campaign_id is required" })
 
     const pipeline = [
         {
             $match: {
-                userId: new mongoose.Types.ObjectId(`${id}`),
+                campaign_id: campaign_id,
+                status: "active"
             }
         },
         {
             $lookup: {
-                from: "TrackingLinks",
-                localField: "trackingLinkId",
-                foreignField: "_id",
-                as: "trackingLinkId"
+                from: "PartnerizeTrackingLinks",
+                localField: "campaign_id",
+                foreignField: "campaign_id",
+                as: "trackingLinks"
             }
         },
-        {
-            $unwind: {
-                path: "$trackingLinkId",
-                preserveNullAndEmptyArrays: true
-            }
-        },
-
 
         {
             $lookup: {
@@ -287,9 +195,9 @@ export const getUserAssignments = asyncHandler(async (req, res) => {
         },
         {
             $lookup: {
-                from: "ClickEvents",
-                localField: "trackingLinkId.ProgramId",
-                foreignField: "ProgramId",
+                from: "PartnerizeClickEvents",
+                localField: "campaign_id",
+                foreignField: "campaign_id",
                 as: "Clicks"
             }
         },
@@ -300,26 +208,12 @@ export const getUserAssignments = asyncHandler(async (req, res) => {
                         input: "$Clicks",
                         as: "click",
                         cond: {
-                            $and: [
+                            $gte: [
                                 {
-                                    $gte: [
-                                        { $toDate: "$$click.EventDate" },
-                                        "$createdAt"
-                                    ]
+                                    $toDate: "$$click.set_time"
                                 },
-                                {
-                                    $or: [
-                                        {
-                                            $eq: ["$status", "active"]
-                                        },
-                                        {
-                                            $and: [
-                                                { $eq: ["$status", "inactive"] },
-                                                { $lte: [{ $toDate: "$$click.EventDate" }, "$inactiveDate"] }
-                                            ]
-                                        }
-                                    ]
-                                }
+                                // Ensure EventDate is a Date
+                                "$createdAt" // createdAt is already a Date
                             ]
                         }
                     }
@@ -328,13 +222,219 @@ export const getUserAssignments = asyncHandler(async (req, res) => {
         },
         {
             $addFields: {
-                totalClicks: { $size: "$Clicks" }
+                totalClicks: {
+                    $size: "$Clicks"
+                }
             }
         },
         {
             $project: {
                 Clicks: 0,
                 "userId.password": 0
+            }
+        }
+    ]
+
+    const assignments = await Assignments.aggregate(pipeline)
+    return res.status(200).json(assignments)
+})
+
+
+export const getUserAssignments = asyncHandler(async (req, res) => {
+
+    let id = req?.user?._id
+
+    if (req?.query?.id) id = req?.query?.id
+
+    if (!id) return res.status(500).message({ status: "User ID is required." })
+
+
+    const pipeline = [
+        {
+            $match: {
+                userId: new mongoose.Types.ObjectId(`${id}`),
+            }
+        },
+
+        {
+            $lookup: {
+                from: "TrackingLinks",
+                localField: "trackingLinkId",
+                foreignField: "_id",
+                as: "trackingLinkId"
+            }
+        },
+        {
+            $unwind: {
+                path: "$trackingLinkId",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+
+        {
+            $lookup: {
+                from: "PartnerizeTrackingLinks",
+                localField: "campaign_id",
+                foreignField: "campaign_id",
+                as: "trackingLinkId"
+            }
+        },
+
+        {
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "userId"
+            }
+        },
+
+        {
+            $unwind: {
+                path: "$userId",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+
+        // impact clicks
+        {
+            $lookup: {
+                from: "ClickEvents",
+                localField: "trackingLinkId.ProgramId",
+                foreignField: "ProgramId",
+                as: "impactClicks"
+            }
+        },
+
+        // partnerize clicks
+        {
+            $lookup: {
+                from: "PartnerizeClickEvents",
+                localField: "campaign_id",
+                foreignField: "campaign_id",
+                as: "partnerizeClicks"
+            }
+        },
+
+        {
+            $addFields: {
+                Clicks: {
+                    $cond: [
+                        { $eq: ["$platform", "impact"] },
+                        {
+                            $filter: {
+                                input: "$impactClicks",
+                                as: "click",
+                                cond: {
+                                    $and: [
+                                        {
+                                            $gte: [
+                                                {
+                                                    $toDate:
+                                                        "$$click.EventDate"
+                                                },
+                                                "$createdAt"
+                                            ]
+                                        },
+                                        {
+                                            $or: [
+                                                {
+                                                    $eq: ["$status", "active"]
+                                                },
+                                                {
+                                                    $and: [
+                                                        {
+                                                            $eq: [
+                                                                "$status",
+                                                                "inactive"
+                                                            ]
+                                                        },
+                                                        {
+                                                            $lte: [
+                                                                {
+                                                                    $toDate:
+                                                                        "$$click.EventDate"
+                                                                },
+                                                                "$inactiveDate"
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            $filter: {
+                                input: "$partnerizeClicks",
+                                as: "click",
+                                cond: {
+                                    $and: [
+                                        {
+                                            $gte: [
+                                                {
+                                                    $toDate:
+                                                        "$$click.set_time"
+                                                },
+                                                "$createdAt"
+                                            ]
+                                        },
+                                        {
+                                            $or: [
+                                                {
+                                                    $eq: ["$status", "active"]
+                                                },
+                                                {
+                                                    $and: [
+                                                        {
+                                                            $eq: [
+                                                                "$status",
+                                                                "inactive"
+                                                            ]
+                                                        },
+                                                        {
+                                                            $lte: [
+                                                                {
+                                                                    $toDate:
+                                                                        "$$click.set_time"
+                                                                },
+                                                                "$inactiveDate"
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+
+        {
+            $addFields: {
+                totalClicks: { $size: "$Clicks" }
+            }
+        },
+
+        {
+            $project: {
+                Clicks: 0,
+                impactClicks: 0,
+                partnerizeClicks: 0,
+                "userId.password": 0
+            }
+        },
+        {
+            $group: {
+                _id: "$platform",
+                records: { $push: "$$ROOT" },
+                totalPlatformClicks: { $sum: "$totalClicks" }
             }
         }
     ];

@@ -4,8 +4,8 @@ import { authenticateToken } from '../middlewares/authenticateToken.js'
 
 const usersRouter = express.Router()
 
-usersRouter.route('/').get(getAllUsers).post(createUser)
+usersRouter.route('/').get(authenticateToken, getAllUsers).post(authenticateToken, createUser)
 usersRouter.route('/info').get(authenticateToken, getUserInfo)
-usersRouter.route('/:id').get(getUser).patch(updateUser).delete(deleteUser)
+usersRouter.route('/:id').get(getUser).patch(authenticateToken, updateUser).delete(authenticateToken, deleteUser)
 
 export default usersRouter
