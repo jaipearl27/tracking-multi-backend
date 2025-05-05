@@ -3,7 +3,7 @@ import { asyncHandler } from "../../utils/errors/asyncHandler.js";
 
 export const createTrackingLink = asyncHandler(async (req, res, next) => {
     const { TrackingLink, ProgramId, platform } = req.body;
-
+    
     if (!TrackingLink || !ProgramId || !platform) {
         return res.status(400).json({ success: false, message: "Tracking link, programId & platform are required" });
     }

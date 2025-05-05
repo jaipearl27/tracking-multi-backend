@@ -276,7 +276,7 @@ export const getUserAssignments = asyncHandler(async (req, res) => {
                 from: "PartnerizeTrackingLinks",
                 localField: "campaign_id",
                 foreignField: "campaign_id",
-                as: "trackingLinkId"
+                as: "partnerizeTrackingLinks"
             }
         },
 
@@ -430,12 +430,16 @@ export const getUserAssignments = asyncHandler(async (req, res) => {
                 "userId.password": 0
             }
         },
+
         {
             $group: {
                 _id: "$platform",
                 records: { $push: "$$ROOT" },
                 totalPlatformClicks: { $sum: "$totalClicks" }
             }
+        },
+        {
+            $sort: { _id: 1 }
         }
     ];
 
