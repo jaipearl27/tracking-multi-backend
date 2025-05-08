@@ -279,8 +279,12 @@ export const getActions = asyncHandler(async (req, res, next) => {
                 },
                 {
                     $group: {
-                    _id: "$trimmedState",
-                    totalAssignedPayout: { $sum: "$assignedPayout" }
+                    _id: {
+                        currency: "$Currency",
+                        trimmedState: "$trimmedState"
+                      },
+                    totalAssignedPayout: { $sum: "$assignedPayout" },
+                    ...(req?.user?.role === "ADMIN" ? {totalAdminPayout: {$sum: {$toDouble: "$Payout"}}} : {})
                     }
                 },
                 {$sort: {_id: 1}},
@@ -288,7 +292,8 @@ export const getActions = asyncHandler(async (req, res, next) => {
                     $project: {
                     _id: 0,
                     State: "$_id",
-                    totalAssignedPayout: 1
+                    totalAssignedPayout: 1,
+                    ...(req?.user?.role === "ADMIN" ? {totalAdminPayout: 1} : {})
                     }
                 }
                 ]
