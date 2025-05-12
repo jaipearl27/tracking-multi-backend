@@ -190,6 +190,6 @@ export const deleteTrackingLink = asyncHandler(async (req, res) => {
     const {id} = req?.params
     if(!id) return res.status(500).json({status: false, message: "ID not provided"})
 
-    const result = PartnerizeTrackingLink.findByIdAndDelete(id)
+    const result = await PartnerizeTrackingLink.findByIdAndDelete(id)
     return res.status(200).json({message: "Link deleted successfully", result})
 })
