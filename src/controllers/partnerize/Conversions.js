@@ -1,8 +1,6 @@
 import mongoose from "mongoose";
-
 import { asyncHandler } from "../../utils/errors/asyncHandler.js";
-
-// import chalk from "chalk"
+import chalk from "chalk"
 import ConversionModel from "../../models/partnerize/conversions.js";
 
 export const addConversion = asyncHandler(async (req, res, next) => {
@@ -45,11 +43,10 @@ export const getConversions = asyncHandler(async (req, res, next) => {
     maxPayout,
     minEventDate,
     maxEventDate,
-    programName,
-    programId,
+    campaign_title,
+    campaign_id,
     email,
-    trackingLink,
-    state,
+    conversion_status,
   } = req?.query
 
 
@@ -58,6 +55,8 @@ export const getConversions = asyncHandler(async (req, res, next) => {
   if (req?.user?.role && req?.user?.role !== "ADMIN") {
     userId = req?.user?._id
   }
+
+  console.log(chalk.bgWhite('USER ID: ', userId))
 
   // converting minEventDate to start of the day time 
   minEventDate = new Date(minEventDate).setHours(0, 0, 0, 0)
@@ -73,7 +72,7 @@ export const getConversions = asyncHandler(async (req, res, next) => {
     ...(minEventDate || maxEventDate ? [
       {
         $match: {
-          EventDate: {
+          conversion_time: {
             ...(minEventDate ? { $gte: new Date(minEventDate) } : {}),
             ...(maxEventDate ? { $lte: new Date(maxEventDate) } : {})
           }
@@ -81,26 +80,26 @@ export const getConversions = asyncHandler(async (req, res, next) => {
       }
     ] : []),
 
-    ...(programName ? [
+    ...(campaign_title ? [
       {
         $match: {
-          CampaignName: programName
+          campaign_title: campaign_title
         }
       }
     ] : []),
 
-    ...(programId ? [
+    ...(campaign_id ? [
       {
         $match: {
-          CampaignId: programId
+          campaign_id: campaign_id
         }
       }
     ] : []),
 
-    ...(state ? [
+    ...(conversion_status ? [
       {
         $match: {
-          State: state
+          "conversion_value.conversion_status": conversion_status
         }
       }
     ] : []),
