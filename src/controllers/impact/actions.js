@@ -36,6 +36,9 @@ export const getActions = asyncHandler(async (req, res, next) => {
         userId = req?.user?._id
     }
 
+      console.log(chalk.bgWhite('Impact Action USER ID: ', userId))
+    
+
     // converting minEventDate to start of the day time 
     minEventDate = new Date(minEventDate).setHours(0,0,0,0)
 

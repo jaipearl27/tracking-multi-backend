@@ -56,7 +56,7 @@ export const getConversions = asyncHandler(async (req, res, next) => {
     userId = req?.user?._id
   }
 
-  console.log(chalk.bgWhite('USER ID: ', userId))
+  console.log(chalk.bgWhite('Partnerize conversion USER ID: ', userId))
 
   // converting minEventDate to start of the day time 
   minEventDate = new Date(minEventDate).setHours(0, 0, 0, 0)
