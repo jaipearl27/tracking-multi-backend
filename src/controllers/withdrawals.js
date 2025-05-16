@@ -154,3 +154,174 @@ export const getWithdrawalsByUserId = asyncHandler(async (req, res, next) => {
 
     res.status(200).json({ success: true, count: withdrawals.length, withdrawals });
 });
+
+
+
+
+
+// [
+  
+
+//     {
+//       $lookup: {
+//         from: "Assignments",
+//         let: {
+//           campaign_id: "$campaign_id",
+//           conversion_time: "$conversion_time"
+//         },
+//         pipeline: [
+//           {
+//             $match: {
+//               $expr: {
+//                 $and: [
+//                   {
+//                     $eq: [
+//                       "$campaign_id",
+//                       "$$campaign_id"
+//                     ]
+//                   },
+//                   {
+//                     $lte: [
+//                       "$createdAt",
+//                       "$$conversion_time"
+//                     ]
+//                   },
+//                   {
+//                     $cond: {
+//                       if: {
+//                         $gte: [
+//                           "$inactiveDate",
+//                           "$$conversion_time"
+//                         ]
+//                       },
+//                       then: true,
+//                       else: {
+//                         $eq: ["$inactiveDate", null]
+//                       }
+//                     }
+//                   }
+//                 ]
+//               }
+//             }
+//           }
+//         ],
+//         as: "Assignment"
+//       }
+//     },
+//     {
+//       $unwind: {
+//         path: "$Assignment",
+//         preserveNullAndEmptyArrays: true
+//       }
+//     },
+
+
+
+
+//     {
+//       $addFields: {
+//         assignedPayout: {
+//           $cond: {
+//             if: {
+//               $ifNull: [
+//                 "$Assignment.commissionPercentage",
+//                 false
+//               ]
+//             },
+//             then: {
+//               $round: [
+//                 {
+//                   $multiply: [
+//                     {
+//                       $toDouble:
+//                         "$conversion_value.publisher_commission"
+//                     },
+//                     {
+//                       $divide: [
+//                         "$Assignment.commissionPercentage",
+//                         100
+//                       ]
+//                     }
+//                   ]
+//                 },
+//                 2 // Round to 2 decimal places
+//               ]
+//             },
+//             else: 0
+//           }
+//         }
+//       }
+//     },
+
+
+
+//     {
+//       $facet: {
+//         summary: [
+//           {
+//             $addFields: {
+//               assignedPayout: {
+//                 $cond: {
+//                   if: {
+//                     $ifNull: [
+//                       "$Assignment.commissionPercentage",
+//                       false
+//                     ]
+//                   },
+//                   then: {
+//                     $round: [
+//                       {
+//                         $multiply: [
+//                           {
+//                             $toDouble:
+//                               "$conversion_value.publisher_commission"
+//                           },
+//                           {
+//                             $divide: [
+//                               "$Assignment.commissionPercentage",
+//                               100
+//                             ]
+//                           }
+//                         ]
+//                       },
+//                       2
+//                     ]
+//                   },
+//                   else: 0
+//                 }
+//               },
+//               trimmedState: {
+//                 $trim: {
+//                   input:
+//                     "$conversion_value.conversion_status"
+//                 }
+//               }
+//             }
+//           },
+//           {
+//             $group: {
+//               _id: {
+//                 currency: "$currency",
+//                 trimmedState: "$trimmedState"
+//               },
+//               totalAssignedPayout: {
+//                 $sum: "$assignedPayout"
+//               }
+//             }
+//           },
+//           {
+//             $sort: {
+//               _id: 1
+//             }
+//           },
+//           {
+//             $project: {
+//               _id: 0,
+//               State: "$_id",
+//               totalAssignedPayout: 1
+//             }
+//           }
+//         ]
+//       }
+//     }
+//   ]
