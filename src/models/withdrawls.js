@@ -16,6 +16,10 @@ const withdrawalSchema = new mongoose.Schema({
         required: [true, 'Withdrawal Amount is required.'],
         min: [0.01, 'Withdrawal amount must be positive.']
     },
+    currency: {
+        type: String,
+        required: false,
+    }
 }, { timestamps: true });
 
 const Withdrawal = mongoose.model("Withdrawal", withdrawalSchema);

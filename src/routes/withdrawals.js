@@ -6,7 +6,8 @@ import {
     getWithdrawalById,
     updateWithdrawal,
     deleteWithdrawal,
-    getWithdrawalsByUserId
+    getWithdrawalsByUserId,
+    getTotalPayouts
 } from '../controllers/withdrawals.js';
 import { authenticateToken } from '../middlewares/authenticateToken.js';
 
@@ -18,6 +19,8 @@ router.use(authenticateToken)
 router.route('/')
     .post(createWithdrawal)
     .get(getAllWithdrawals);
+
+router.route("/total-payouts").get(getTotalPayouts)
 
 
 router.route('/:id')
