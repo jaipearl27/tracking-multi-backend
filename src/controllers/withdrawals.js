@@ -7,17 +7,489 @@ import Withdrawal from "../models/withdrawls.js";
 import { asyncHandler } from "../utils/errors/asyncHandler.js"; // Assuming your asyncHandler path
 import mongoose from "mongoose";
 
+
+
+const statusEnum = [
+    "APPROVED",
+    "approved"
+]
+
+
+
+
+
+
+// Get total for assigned payouts
+export const getWithdrawals = asyncHandler(async (req, res) => {
+    let userId
+
+    if (req?.user?.role && req?.user?.role !== "ADMIN") {
+        if (mongoose.isValidObjectId(req?.user?._id)) {
+            userId = req?.user?._id
+        } else {
+            return res.status(400).json({ success: false, message: "Invalid mongodb id." })
+        }
+
+    }
+
+    // partnerize
+    const partnerizePipeline = [
+        ...(statusEnum ? [
+            {
+                $match: {
+                    $or: [
+                        ...(statusEnum?.map(status => {
+                            return {
+                                "conversion_value.conversion_status": status
+                            }
+                        }))
+                    ]
+                }
+            }
+        ] : []),
+        {
+            $lookup: {
+                from: "Assignments",
+                let: {
+                    campaign_id: "$campaign_id",
+                    conversion_time: "$conversion_time"
+                },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    {
+                                        $eq: [
+                                            "$campaign_id",
+                                            "$$campaign_id"
+                                        ]
+                                    },
+                                    {
+                                        $lte: [
+                                            "$createdAt",
+                                            "$$conversion_time"
+                                        ]
+                                    },
+                                    {
+                                        $cond: {
+                                            if: {
+                                                $gte: [
+                                                    "$inactiveDate",
+                                                    "$$conversion_time"
+                                                ]
+                                            },
+                                            then: true,
+                                            else: {
+                                                $eq: ["$inactiveDate", null]
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ],
+                as: "Assignment"
+            }
+        },
+        {
+            $unwind: {
+                path: "$Assignment",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+
+        ...(userId ? [{
+            $match: {
+                $expr: {
+                    $eq: ["$Assignment.userId", new mongoose.Types.ObjectId(`${userId}`)]
+                }
+            }
+        }] : []),
+
+        {
+            $addFields: {
+                assignedPayout: {
+                    $cond: {
+                        if: {
+                            $ifNull: [
+                                "$Assignment.commissionPercentage",
+                                false
+                            ]
+                        },
+                        then: {
+                            $round: [
+                                {
+                                    $multiply: [
+                                        {
+                                            $toDouble:
+                                                "$conversion_value.publisher_commission"
+                                        },
+                                        {
+                                            $divide: [
+                                                "$Assignment.commissionPercentage",
+                                                100
+                                            ]
+                                        }
+                                    ]
+                                },
+                                2 // Round to 2 decimal places
+                            ]
+                        },
+                        else: 0
+                    }
+                }
+            }
+        },
+
+        {
+            $addFields: {
+                assignedPayout: {
+                    $cond: {
+                        if: {
+                            $ifNull: [
+                                "$Assignment.commissionPercentage",
+                                false
+                            ]
+                        },
+                        then: {
+                            $round: [
+                                {
+                                    $multiply: [
+                                        {
+                                            $toDouble:
+                                                "$conversion_value.publisher_commission"
+                                        },
+                                        {
+                                            $divide: [
+                                                "$Assignment.commissionPercentage",
+                                                100
+                                            ]
+                                        }
+                                    ]
+                                },
+                                2
+                            ]
+                        },
+                        else: 0
+                    }
+                },
+                trimmedState: {
+                    $trim: {
+                        input:
+                            "$conversion_value.conversion_status"
+                    }
+                }
+            }
+        },
+        {
+            $group: {
+                _id: {
+                    currency: "$currency",
+                    trimmedState: "$trimmedState"
+                },
+                totalAssignedPayout: {
+                    $sum: "$assignedPayout"
+                },
+                ...(req?.user?.role === "ADMIN" ? { totalAdminPayout: { $sum: { $toDouble: "$conversion_value.publisher_commission" } } } : {})
+            }
+        },
+        {
+            $sort: {
+                _id: 1
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                State: "$_id",
+                platform: "PARTNERIZE",
+                totalAssignedPayout: 1,
+                ...(req?.user?.role === "ADMIN" ? { totalAdminPayout: 1 } : {})
+            }
+        }
+
+    ]
+
+    const partnerizePayouts = await ConversionModel.aggregate(partnerizePipeline)
+
+    // impact
+    const impactPipeline = [
+        ...(statusEnum ? [
+            {
+                $match: {
+                    $or: [
+                        ...(statusEnum?.map(status => {
+                            return {
+                                Status: status
+                            }
+                        }))
+                    ]
+                }
+            }
+        ] : []),
+        {
+            $lookup: {
+                from: "TrackingLinks",
+                localField: "CampaignId",
+                foreignField: "ProgramId",
+                as: "TrackingLink"
+            }
+        },
+        {
+            $unwind: {
+                path: "$TrackingLink",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $lookup: {
+                from: "Assignments",
+                let: {
+                    trackingLinkId: "$TrackingLink._id",
+                    eventDate: "$EventDate"
+                },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    {
+                                        $eq: [
+                                            "$trackingLinkId",
+                                            "$$trackingLinkId"
+                                        ]
+                                    },
+                                    {
+                                        $lte: [
+                                            "$createdAt",
+                                            "$$eventDate"
+                                        ]
+                                    },
+                                    {
+                                        $cond: {
+                                            if: {
+                                                $gte: [
+                                                    "$inactiveDate",
+                                                    "$$eventDate"
+                                                ]
+                                            },
+                                            then: true,
+                                            else: {
+                                                $eq: ["$inactiveDate", null]
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ],
+                as: "Assignment"
+            }
+        },
+        {
+            $unwind: {
+                path: "$Assignment",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        ...(userId ? [{
+            $match: {
+                $expr: {
+                    $eq: ["$Assignment.userId", new mongoose.Types.ObjectId(`${userId}`)]
+                }
+            }
+        }] : []),
+        {
+            $addFields: {
+                assignedPayout: {
+                    $cond: {
+                        if: {
+                            $ifNull: [
+                                "$Assignment.commissionPercentage",
+                                false
+                            ]
+                        },
+                        then: {
+                            $round: [
+                                {
+                                    $multiply: [
+                                        {
+                                            $toDouble: "$Payout"
+                                        },
+                                        // No division by 100 — it's already in rupees
+                                        {
+                                            $divide: [
+                                                "$Assignment.commissionPercentage",
+                                                100
+                                            ]
+                                        }
+                                    ]
+                                },
+                                2 // Round to 2 decimal places
+                            ]
+                        },
+                        else: 0
+                    }
+                }
+            }
+        },
+
+
+        {
+            $addFields: {
+                assignedPayout: {
+                    $cond: {
+                        if: {
+                            $ifNull: [
+                                "$Assignment.commissionPercentage",
+                                false
+                            ]
+                        },
+                        then: {
+                            $round: [
+                                {
+                                    $multiply: [
+                                        {
+                                            $toDouble: "$Payout"
+                                        },
+                                        {
+                                            $divide: [
+                                                "$Assignment.commissionPercentage",
+                                                100
+                                            ]
+                                        }
+                                    ]
+                                },
+                                2
+                            ]
+                        },
+                        else: 0
+                    }
+                },
+                trimmedState: {
+                    $trim: {
+                        input: "$State"
+                    }
+                }
+            }
+        },
+        {
+            $group: {
+                _id: {
+                    currency: "$Currency",
+                    trimmedState: "$trimmedState"
+                },
+                totalAssignedPayout: {
+                    $sum: "$assignedPayout"
+                },
+                ...(req?.user?.role === "ADMIN" ? { totalAdminPayout: { $sum: { $toDouble: "$Payout" } } } : {})
+            }
+        },
+        {
+            $sort: {
+                _id: 1
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                State: "$_id",
+                platform: "IMPACT",
+                totalAssignedPayout: 1,
+                ...(req?.user?.role === "ADMIN" ? { totalAdminPayout: 1 } : {})
+            }
+        }
+
+    ]
+
+    // {
+    //   "$match": {
+    //     "Status": {
+    //       "$regex": "^approved$",
+    //       "$options": "i"
+    //     }
+    //   }
+    // }
+
+    const impactPayouts = await ActionModel.aggregate(impactPipeline)
+
+    const payouts = [...partnerizePayouts, ...impactPayouts]
+
+    const withdrawalPipeline = [
+        ...(userId ? [{
+            $match: {
+                $expr: {
+                    $eq: ["$user", new mongoose.Types.ObjectId(`${userId}`)]
+                }
+            }
+        }] : []),
+        {
+            $addFields: {
+                normalizedCurrency: { $toUpper: "$currency" }
+            }
+        },
+        {
+            $group: {
+                _id: "$normalizedCurrency",
+                amount: { $sum: { $toDouble: "$amount" } }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                currency: "$_id",
+                amount: 1
+            }
+        }
+    ]
+
+
+    const withdrawals = await Withdrawal.aggregate(withdrawalPipeline)
+
+    const processedPayouts = payouts.map((item) => {
+        const withdrawal = withdrawals.find((e) => {
+            // console.log(e)
+            // console.log(item)
+            return e.currency === item?.State?.currency
+        })
+        console.log(withdrawal)
+        if (withdrawal) {
+            item.totalAssignedPayout = item?.totalAssignedPayout - withdrawal?.amount
+        }
+        return item
+    })
+
+
+    return res.status(200).json({ success: true, message: payouts?.length > 0 ? "Available Payouts Data Found." : "No Data Found.", payouts: processedPayouts, withdrawals })
+
+})
+
+
+
 // Create a new withdrawal request
 export const createWithdrawal = asyncHandler(async (req, res, next) => {
-    const { userId, amount, approved } = req.body;
+    const { amount, approved, currency } = req.body;
 
     // Validate input
-    if (!userId || !amount) {
-        return res.status(400).json({ success: false, message: "User ID and Amount are required." });
+    if (!amount && !currency) {
+        return res.status(400).json({ success: false, message: "Amount and currency required." });
     }
 
     if (typeof amount !== 'number' || amount <= 0) {
         return res.status(400).json({ success: false, message: "Amount must be a positive number." });
+    }
+
+    let userId
+
+    if (req?.user?.role && req?.user?.role !== "ADMIN") {
+        if (mongoose.isValidObjectId(req?.user?._id)) {
+            userId = req?.user?._id
+        } else {
+            return res.status(400).json({ success: false, message: "Invalid mongodb role/id." })
+        }
     }
 
     // Check if user exists
@@ -28,8 +500,9 @@ export const createWithdrawal = asyncHandler(async (req, res, next) => {
 
     // Create new withdrawal
     const withdrawalPayload = {
-        user: userId,
+        user: new mongoose.Types.ObjectId(`${userId}`),
         amount,
+        currency
     };
 
     // 'approved' is optional and defaults to true in the schema
@@ -159,381 +632,3 @@ export const getWithdrawalsByUserId = asyncHandler(async (req, res, next) => {
 
 
 
-// Get total for assigned payouts
-export const getTotalPayouts = asyncHandler(async (req, res) => {
-    let userId
-
-    if (req?.user?.role && req?.user?.role !== "ADMIN") {
-        if (mongoose.isValidObjectId(req?.user?._id)) {
-            userId = req?.user?._id
-        } else {
-            return res.status(400).json({ success: false, message: "Invalid mongodb id." })
-        }
-
-    }
-
-    // partnerize
-
-    const partnerizePipeline = [
-        {
-            $lookup: {
-                from: "Assignments",
-                let: {
-                    campaign_id: "$campaign_id",
-                    conversion_time: "$conversion_time"
-                },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: {
-                                $and: [
-                                    {
-                                        $eq: [
-                                            "$campaign_id",
-                                            "$$campaign_id"
-                                        ]
-                                    },
-                                    {
-                                        $lte: [
-                                            "$createdAt",
-                                            "$$conversion_time"
-                                        ]
-                                    },
-                                    {
-                                        $cond: {
-                                            if: {
-                                                $gte: [
-                                                    "$inactiveDate",
-                                                    "$$conversion_time"
-                                                ]
-                                            },
-                                            then: true,
-                                            else: {
-                                                $eq: ["$inactiveDate", null]
-                                            }
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    }
-                ],
-                as: "Assignment"
-            }
-        },
-        {
-            $unwind: {
-                path: "$Assignment",
-                preserveNullAndEmptyArrays: true
-            }
-        },
-
-        ...(userId ? [{
-            $match: {
-                $expr: {
-                    $eq: ["$Assignment.userId", new mongoose.Types.ObjectId(`${userId}`)]
-                }
-            }
-        }] : []),
-
-        {
-            $addFields: {
-                assignedPayout: {
-                    $cond: {
-                        if: {
-                            $ifNull: [
-                                "$Assignment.commissionPercentage",
-                                false
-                            ]
-                        },
-                        then: {
-                            $round: [
-                                {
-                                    $multiply: [
-                                        {
-                                            $toDouble:
-                                                "$conversion_value.publisher_commission"
-                                        },
-                                        {
-                                            $divide: [
-                                                "$Assignment.commissionPercentage",
-                                                100
-                                            ]
-                                        }
-                                    ]
-                                },
-                                2 // Round to 2 decimal places
-                            ]
-                        },
-                        else: 0
-                    }
-                }
-            }
-        },
-        {
-            $facet: {
-                summary: [
-                    {
-                        $addFields: {
-                            assignedPayout: {
-                                $cond: {
-                                    if: {
-                                        $ifNull: [
-                                            "$Assignment.commissionPercentage",
-                                            false
-                                        ]
-                                    },
-                                    then: {
-                                        $round: [
-                                            {
-                                                $multiply: [
-                                                    {
-                                                        $toDouble:
-                                                            "$conversion_value.publisher_commission"
-                                                    },
-                                                    {
-                                                        $divide: [
-                                                            "$Assignment.commissionPercentage",
-                                                            100
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            2
-                                        ]
-                                    },
-                                    else: 0
-                                }
-                            },
-                            trimmedState: {
-                                $trim: {
-                                    input:
-                                        "$conversion_value.conversion_status"
-                                }
-                            }
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: {
-                                currency: "$currency",
-                                trimmedState: "$trimmedState"
-                            },
-                            totalAssignedPayout: {
-                                $sum: "$assignedPayout"
-                            },
-                            ...(req?.user?.role === "ADMIN" ? { totalAdminPayout: { $sum: { $toDouble: "$conversion_value.publisher_commission" } } } : {})
-                        }
-                    },
-                    {
-                        $sort: {
-                            _id: 1
-                        }
-                    },
-                    {
-                        $project: {
-                            _id: 0,
-                            State: "$_id",
-                            totalAssignedPayout: 1,
-                            ...(req?.user?.role === "ADMIN" ? { totalAdminPayout: 1 } : {})
-                        }
-                    }
-                ]
-            }
-        }
-    ]
-
-
-    const partnerizePayouts = await ConversionModel.aggregate(partnerizePipeline)
-
-
-
-
-    // impact
-
-    const impactPipeline = [
-        {
-            $lookup: {
-                from: "TrackingLinks",
-                localField: "CampaignId",
-                foreignField: "ProgramId",
-                as: "TrackingLink"
-            }
-        },
-        {
-            $unwind: {
-                path: "$TrackingLink",
-                preserveNullAndEmptyArrays: true
-            }
-        },
-        {
-            $lookup: {
-                from: "Assignments",
-                let: {
-                    trackingLinkId: "$TrackingLink._id",
-                    eventDate: "$EventDate"
-                },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: {
-                                $and: [
-                                    {
-                                        $eq: [
-                                            "$trackingLinkId",
-                                            "$$trackingLinkId"
-                                        ]
-                                    },
-                                    {
-                                        $lte: [
-                                            "$createdAt",
-                                            "$$eventDate"
-                                        ]
-                                    },
-                                    {
-                                        $cond: {
-                                            if: {
-                                                $gte: [
-                                                    "$inactiveDate",
-                                                    "$$eventDate"
-                                                ]
-                                            },
-                                            then: true,
-                                            else: {
-                                                $eq: ["$inactiveDate", null]
-                                            }
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    }
-                ],
-                as: "Assignment"
-            }
-        },
-        {
-            $unwind: {
-                path: "$Assignment",
-                preserveNullAndEmptyArrays: true
-            }
-        },
-        ...(userId ? [{
-            $match: {
-                $expr: {
-                    $eq: ["$Assignment.userId", new mongoose.Types.ObjectId(`${userId}`)]
-                }
-            }
-        }] : []),
-        {
-            $addFields: {
-                assignedPayout: {
-                    $cond: {
-                        if: {
-                            $ifNull: [
-                                "$Assignment.commissionPercentage",
-                                false
-                            ]
-                        },
-                        then: {
-                            $round: [
-                                {
-                                    $multiply: [
-                                        {
-                                            $toDouble: "$Payout"
-                                        },
-                                        // No division by 100 — it's already in rupees
-                                        {
-                                            $divide: [
-                                                "$Assignment.commissionPercentage",
-                                                100
-                                            ]
-                                        }
-                                    ]
-                                },
-                                2 // Round to 2 decimal places
-                            ]
-                        },
-                        else: 0
-                    }
-                }
-            }
-        },
-
-        {
-            $facet: {
-                summary: [
-                    {
-                        $addFields: {
-                            assignedPayout: {
-                                $cond: {
-                                    if: {
-                                        $ifNull: [
-                                            "$Assignment.commissionPercentage",
-                                            false
-                                        ]
-                                    },
-                                    then: {
-                                        $round: [
-                                            {
-                                                $multiply: [
-                                                    {
-                                                        $toDouble: "$Payout"
-                                                    },
-                                                    {
-                                                        $divide: [
-                                                            "$Assignment.commissionPercentage",
-                                                            100
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            2
-                                        ]
-                                    },
-                                    else: 0
-                                }
-                            },
-                            trimmedState: {
-                                $trim: {
-                                    input: "$State"
-                                }
-                            }
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: {
-                                currency: "$Currency",
-                                trimmedState: "$trimmedState"
-                            },
-                            totalAssignedPayout: {
-                                $sum: "$assignedPayout"
-                            },
-                            ...(req?.user?.role === "ADMIN" ? { totalAdminPayout: { $sum: { $toDouble: "$Payout" } } } : {})
-                        }
-                    },
-                    {
-                        $sort: {
-                            _id: 1
-                        }
-                    },
-                    {
-                        $project: {
-                            _id: 0,
-                            State: "$_id",
-                            totalAssignedPayout: 1,
-                            ...(req?.user?.role === "ADMIN" ? { totalAdminPayout: 1 } : {})
-                        }
-                    }
-                ]
-            }
-        }
-    ]
-
-    const impactPayouts = await ActionModel.aggregate(impactPipeline)
-
-
-    return res.status(200).json({ success: true, message: "Total Payouts Data Found.", partnerizePayouts, impactPayouts })
-
-})
