@@ -222,7 +222,7 @@ export const getWithdrawals = asyncHandler(async (req, res) => {
                     $or: [
                         ...(statusEnum?.map(status => {
                             return {
-                                Status: status
+                                State: status
                             }
                         }))
                     ]
