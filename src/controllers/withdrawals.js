@@ -426,6 +426,21 @@ export const getWithdrawals = asyncHandler(async (req, res) => {
                 }
             }
         }] : []),
+
+        {
+            $lookup: {
+                from: "users",
+                localField: "user",
+                foreignField: "_id",
+                as: "user"
+            }
+        },
+        {
+            $unwind: {
+                path: "$user",
+                preserveNullAndEmptyArrays: true
+            }
+        },
         {
             $addFields: {
                 normalizedCurrency: { $toUpper: "$currency" }
@@ -433,21 +448,35 @@ export const getWithdrawals = asyncHandler(async (req, res) => {
         },
         {
             $group: {
-                _id: "$normalizedCurrency",
-                amount: { $sum: { $toDouble: "$amount" } }
+                _id: {
+                    currency: "$normalizedCurrency"
+                },
+                amount: {
+                    $sum: { $toDouble: "$amount" }
+                },
+                user: { $first: "$user" },
+                approved: { $first: "$approved" },
+                createdAt: { $first: "$createdAt" },
+                updatedAt: { $first: "$updatedAt" }
             }
         },
         {
             $project: {
                 _id: 0,
-                currency: "$_id",
-                amount: 1
+                currency: "$_id.currency",
+                amount: 1,
+                user: 1,
+                approved: 1,
+                createdAt: 1,
+                updatedAt: 1
             }
         }
     ]
 
 
     const withdrawals = await Withdrawal.aggregate(withdrawalPipeline)
+
+    console.log('withdrawals', withdrawals)
 
     const processedPayouts = payouts.map((item) => {
         const withdrawal = withdrawals.find((e) => {
