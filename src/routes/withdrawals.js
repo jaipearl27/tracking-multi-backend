@@ -21,6 +21,8 @@ router.route('/')
     .post(createWithdrawal)
     .get(getWithdrawals);
 
+router.route('/all').get(getAllWithdrawals)
+
 // router.route("/available-payouts").get(getWithdrawals)
 
 

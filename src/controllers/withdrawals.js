@@ -15,11 +15,7 @@ const statusEnum = [
 ]
 
 
-
-
-
-
-// Get total for assigned payouts
+// Get totals for assigned payouts & withdrawals
 export const getWithdrawals = asyncHandler(async (req, res) => {
     let userId
 
@@ -476,23 +472,51 @@ export const getWithdrawals = asyncHandler(async (req, res) => {
 
     const withdrawals = await Withdrawal.aggregate(withdrawalPipeline)
 
-    console.log('withdrawals', withdrawals)
 
-    const processedPayouts = payouts.map((item) => {
+    const aggregatedData = payouts.reduce((accumulator, currentItem) => {
+        // Ensure State and its properties exist to prevent errors
+        if (!currentItem.State || !currentItem.State.currency || !currentItem.State.trimmedState) {
+            return accumulator; // Skip malformed items
+        }
+
+        const currency = currentItem.State.currency;
+        const state = currentItem.State.trimmedState.toLowerCase(); // Make it case-insensitive
+
+        // Only process if the state is 'approved'
+        if (state === "approved") {
+            // If this currency is not yet in the accumulator, initialize it
+            if (!accumulator[currency]) {
+                accumulator[currency] = {
+                    availablePayout: 0,
+                    availableAdminPayout: 0,
+                    currency: currency
+                };
+            }
+
+            // Add the current item's payouts to the respective currency's totals
+            accumulator[currency].availablePayout += currentItem.totalAssignedPayout;
+            accumulator[currency].availableAdminPayout += currentItem.totalAdminPayout;
+        }
+
+        return accumulator;
+    }, {}); // Initial value of accumulator is an empty object
+
+    // Convert the aggregated object into an array of its values
+    const processedPayouts = Object.values(aggregatedData);
+
+
+    const availablePayouts = processedPayouts.map((item) => {
         const withdrawal = withdrawals.find((e) => {
-            // console.log(e)
-            // console.log(item)
-            return e.currency === item?.State?.currency
+            return e.currency === item?.currency
         })
-        console.log(withdrawal)
         if (withdrawal) {
-            item.totalAssignedPayout = item?.totalAssignedPayout - withdrawal?.amount
+            item.availablePayout = item?.availablePayout - withdrawal?.amount
         }
         return item
     })
 
 
-    return res.status(200).json({ success: true, message: payouts?.length > 0 ? "Available Payouts Data Found." : "No Data Found.", payouts: processedPayouts, withdrawals })
+    return res.status(200).json({ success: true, message: payouts?.length > 0 ? "Available Payouts Data Found." : "No Data Found.", availablePayouts, withdrawals })
 
 })
 
@@ -506,6 +530,9 @@ export const createWithdrawal = asyncHandler(async (req, res, next) => {
     if (!amount && !currency) {
         return res.status(400).json({ success: false, message: "Amount and currency required." });
     }
+
+
+    console.log(typeof amount, 'tpy')
 
     if (typeof amount !== 'number' || amount <= 0) {
         return res.status(400).json({ success: false, message: "Amount must be a positive number." });
@@ -563,7 +590,26 @@ export const getWithdrawalById = asyncHandler(async (req, res, next) => {
 
 // Get all withdrawals (with optional filtering by user or approval status)
 export const getAllWithdrawals = asyncHandler(async (req, res, next) => {
-    const { userId, approvedStatus } = req.query;
+    const { approvedStatus } = req.query;
+
+    let userId
+
+    if (req?.query?.userId && req?.user?.role === 'ADMIN') {
+        userId = req?.query?.userId
+    }
+
+
+    if (req?.user?.role && req?.user?.role !== "ADMIN") {
+        if (mongoose.isValidObjectId(req?.user?._id)) {
+            userId = req?.user?._id
+        } else {
+            return res.status(400).json({ success: false, message: "Invalid mongodb id." })
+        }
+
+    }
+
+
+
     const filter = {};
 
     if (userId) {
