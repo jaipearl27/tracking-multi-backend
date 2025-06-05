@@ -20,7 +20,7 @@ import partnerizeTrackingLinkRouter from "./src/routes/partnerize/TrackingLinks.
 import partnerizeClicksRouter from "./src/routes/partnerize/Clicks.js"
 import partnerizeConversionsRouter from "./src/routes/partnerize/Conversions.js"
 import withdrawalsRouter from "./src/routes/withdrawals.js"
-
+import dashboardRouter from "./src/routes/dashboard.js"
 
 dotenv.config()
 
@@ -55,6 +55,7 @@ app.get('/api/v1/me', tokenVerification)
 // general routes
 app.use('/api/v1/assignments', assignmentsRouter)
 app.use('/api/v1/withdrawals', withdrawalsRouter)
+app.use('/api/v1/dashboard', dashboardRouter)
 
 // routes for impact
 app.use('/api/v1/auth', authRouter)

@@ -7,14 +7,14 @@ import jwt from "jsonwebtoken";
 
 export const authenticateToken = asyncHandler(async (req, res, next) => {
 
-  // console.log('req.headers', req.headers)
+  // console.log('req.headers', req.headers, req?.cookies)
 
   const token =
     req?.cookies?.access_token ||
     req.headers["authorization"]?.replace("Bearer ", "");
   // console.log("token", token);
   if (!token) {
-    return next(new ApiErrorResponse("Unauthorized user 1", 401));
+    return next(new ApiErrorResponse("Unauthorized user", 401));
   }
   const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
   if (!decoded) {

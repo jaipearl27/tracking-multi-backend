@@ -45,8 +45,6 @@ const AssignmentsSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-
 const Assignments = mongoose.model("Assignments", AssignmentsSchema, "Assignments");
-
 
 export default Assignments;
