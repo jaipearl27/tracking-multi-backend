@@ -12,17 +12,23 @@ let scheduledExport = undefined
 const impactAuth = Buffer.from(`${process.env.IMPACT_ACCOUNT_SID}:${process.env.IMPACT_AUTH_TOKEN}`).toString('base64');
 
 async function checkStatus(path) {
-    const url = `https://api.impact.com${path}`;
-
-    const headers = {
-        'Accept': 'application/json',
-        'Authorization': `Basic ${impactAuth}`
-    };
-
-    const response = await fetch(url, { method: 'GET', headers });
-    const data = await response.json();
-
-    return data;
+    try {
+    
+        const url = `https://api.impact.com${path}`;
+    
+        const headers = {
+            'Accept': 'application/json',
+            'Authorization': `Basic ${impactAuth}`
+        };
+    
+        const response = await fetch(url, { method: 'GET', headers });
+        const data = await response.json();
+    
+        return data;
+    } catch (error) {
+        console.error(error)
+        return
+    }
 }
 
 async function scheduleExport(programId = undefined, date = undefined) {

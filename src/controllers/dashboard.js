@@ -6,112 +6,161 @@ import Withdrawal from "../models/withdrawls.js";
 
 
 const getUserId = async (req, res) => {
-    let userId
+  let userId
 
-    if (req?.user?.role && req?.user?.role !== "ADMIN") {
-        if (mongoose.isValidObjectId(req?.user?._id)) {
-            userId = req?.user?._id
-        } else {
-            return
-        }
+  if (req?.user?.role && req?.user?.role !== "ADMIN") {
+    if (mongoose.isValidObjectId(req?.user?._id)) {
+      userId = req?.user?._id
+    } else {
+      return
+    }
+  }
+
+  if (userId) {
+    // Check if user exists & is a valid ObjectId
+    if (mongoose.isValidObjectId(`${userId}`)) {
+      const userExists = await User.findById(userId);
+      if (!userExists) {
+        return res.status(404).json({ success: false, message: "Invalid MongoDB ID." });
+      }
+    } else {
+      return res.status(404).json({ success: false, message: "User not found." });
     }
 
-    if (userId) {
-        // Check if user exists & is a valid ObjectId
-        if (mongoose.isValidObjectId(`${userId}`)) {
-            const userExists = await User.findById(userId);
-            if (!userExists) {
-                return res.status(404).json({ success: false, message: "Invalid MongoDB ID." });
-            }
-        } else {
-            return res.status(404).json({ success: false, message: "User not found." });
-        }
 
+  }
 
-    }
-
-    return userId
+  return userId
 }
 
 
 export const getAssignmentMetrics = asyncHandler(async (req, res) => {
 
-    const userId = await getUserId(req, res)
+  const userId = await getUserId(req, res)
 
-    let startDate = req?.query?.startDate ? new Date(req?.query?.startDate) : new Date();
+  let startDate = req?.query?.startDate ? new Date(req?.query?.startDate) : new Date();
 
-    if (!req?.query?.startDate) {
-        const monthsToSubtract = 1;
-        startDate.setMonth(startDate.getMonth() - monthsToSubtract);
-    }
+  if (!req?.query?.startDate) {
+    const monthsToSubtract = 1;
+    startDate.setMonth(startDate.getMonth() - monthsToSubtract);
+  }
 
-    let endDate = req?.query?.endDate ? new Date(req?.query?.endDate) : new Date();
+  let endDate = req?.query?.endDate ? new Date(req?.query?.endDate) : new Date();
 
-    // Set both dates to UTC boundaries
-    startDate = new Date(Date.UTC(
-        startDate.getUTCFullYear(),
-        startDate.getUTCMonth(),
-        startDate.getUTCDate(),
-        0, 0, 0, 0
-    ));
+  // Set both dates to UTC boundaries
+  startDate = new Date(Date.UTC(
+    startDate.getUTCFullYear(),
+    startDate.getUTCMonth(),
+    startDate.getUTCDate(),
+    0, 0, 0, 0
+  ));
 
-    endDate = new Date(Date.UTC(
-        endDate.getUTCFullYear(),
-        endDate.getUTCMonth(),
-        endDate.getUTCDate(),
-        23, 59, 59, 999
-    ));
+  endDate = new Date(Date.UTC(
+    endDate.getUTCFullYear(),
+    endDate.getUTCMonth(),
+    endDate.getUTCDate(),
+    23, 59, 59, 999
+  ));
 
-    console.log(startDate, endDate)
+  console.log(startDate, endDate)
 
-    const pipeline = [
-        {
-            $match: {
-                ...(userId ? { userId: new mongoose.Types.ObjectId(`${userId}`) } : {}),
-                createdAt: { $gte: startDate },
-                $expr: {
-                    $or: [
-                        { $eq: ["$inactiveDate", null] },
-                        { $lte: ["$inactiveDate", endDate] }
-                    ]
-                }
-            }
-        },
-        {
-            $group: {
-                _id: {
-                    createdDate: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-                    status: "$status"
-                },
-                totalAssignments: { $sum: 1 },
-            }
-        },
-        {
-            $project: {
-                _id: 0,
-                createdAt: "$_id.createdDate",
-                status: "$_id.status",
-                totalAssignments: 1
-
-            }
+  const pipeline = [
+    {
+      $match: {
+        ...(userId ? { userId: new mongoose.Types.ObjectId(`${userId}`) } : {}),
+        createdAt: { $gte: startDate },
+        $expr: {
+          $or: [
+            { $eq: ["$inactiveDate", null] },
+            { $lte: ["$inactiveDate", endDate] }
+          ]
         }
-    ]
+      }
+    },
+    {
+      $group: {
+        _id: {
+          createdDate: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          status: "$status"
+        },
+        totalAssignments: { $sum: 1 },
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        createdAt: "$_id.createdDate",
+        status: "$_id.status",
+        totalAssignments: 1
+
+      }
+    }
+  ]
 
 
-    const data = await Assignments.aggregate(pipeline)
-    console.log(data)
-    return res.status(200).json({ message: "Assignment metrics found", data: data })
+  const data = await Assignments.aggregate(pipeline)
+  console.log(data)
+  return res.status(200).json({ message: "Assignment metrics found", data: data })
 
 
 })
+
+export const getRecentAssignmentsMetrics = async (req, res) => {
+  try {
+    // 1. Get userId from the authenticated request
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ message: "Not authorized, no user" });
+    }
+
+    // 2. Fetch the 10 most recent assignments for the user
+    // We use populate() to get data from the referenced 'TrackingLinks' collection
+    const recentAssignments = await Assignments.find({ userId })
+      .sort({ createdAt: -1 }) // Sort by creation date, newest first
+      .limit(10) // Limit to 10 results
+      .populate({
+        path: "trackingLinkId",
+        // Select the fields you need from the TrackingLinks model
+        select: "name category",
+      })
+      .lean(); // Use .lean() for faster read-only queries
+
+    // 3. Format the data to match the frontend table structure
+    const formattedMetrics = recentAssignments.map((assignment) => {
+      // Handle cases for different platforms
+      const name =
+        assignment.platform === "impact"
+          ? assignment.trackingLinkId?.name || "N/A"
+          : assignment.campaign_id; // For partnerize, use campaign_id as the name    
+
+      return {
+        id: assignment._id,
+        name: name,
+        platform: assignment.platform,
+        status: assignment.status,
+        commissionRates: `${assignment.commissionPercentage}%`,
+        assignedOn: assignment.createdAt
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      count: formattedMetrics.length,
+      data: formattedMetrics,
+    });
+  } catch (error) {
+    console.error("Error fetching assignment metrics:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
 
 export const getWithdrawalMetrics = async (req, res) => {
   const { startDate, endDate } = req.query;
 
   if (!startDate || !endDate) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Please provide both a start date and an end date.' 
+    return res.status(400).json({
+      success: false,
+      message: 'Please provide both a start date and an end date.'
     });
   }
 
@@ -160,3 +209,4 @@ export const getWithdrawalMetrics = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
+
