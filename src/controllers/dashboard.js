@@ -113,25 +113,19 @@ export const getRecentAssignmentsMetrics = async (req, res) => {
       return res.status(401).json({ message: "Not authorized, no user" });
     }
 
-    // 2. Fetch the 10 most recent assignments for the user
-    // We use populate() to get data from the referenced 'TrackingLinks' collection
     const recentAssignments = await Assignments.find({ userId })
-      .sort({ createdAt: -1 }) // Sort by creation date, newest first
-      .limit(10) // Limit to 10 results
+      .sort({ createdAt: -1 })
+      .limit(10)
       .populate({
         path: "trackingLinkId",
-        // Select the fields you need from the TrackingLinks model
-        select: "name category",
+        select: "TrackingLink ProgramId platform",
       })
-      .lean(); // Use .lean() for faster read-only queries
-
-    // 3. Format the data to match the frontend table structure
+      .lean();
     const formattedMetrics = recentAssignments.map((assignment) => {
-      // Handle cases for different platforms
       const name =
         assignment.platform === "impact"
-          ? assignment.trackingLinkId?.name || "N/A"
-          : assignment.campaign_id; // For partnerize, use campaign_id as the name    
+          ? assignment.trackingLinkId?.TrackingLink || "N/A"
+          : assignment.campaign_id;   
 
       return {
         id: assignment._id,

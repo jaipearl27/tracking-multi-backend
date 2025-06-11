@@ -109,7 +109,7 @@ export const scheduleClickExport = async (programId = undefined, date = undefine
 
             if(!data?.Clicks) console.log("Clicks data not found will try later, here the data we got:", data)
 
-            const clickEvents = data?.Clicks.map(click => {
+            const clickEvents = data?.Clicks?.map(click => {
 
                 // Ensure EventDate is stored as a Date
                 if (click.EventDate && typeof click.EventDate === "string") {
