@@ -4,7 +4,7 @@ import Assignments from "../models/assignments.js"
 import { asyncHandler } from "../utils/errors/asyncHandler.js";
 import Withdrawal from "../models/withdrawls.js";
 import ConversionModel from "../models/partnerize/conversions.js";
-
+import ActionModel from "../models/impact/actions.js"
 
 const getUserId = async (req, res) => {
   let userId
@@ -321,5 +321,123 @@ export const getPartnerizeConversionMetrics = asyncHandler(async (req, res, next
 
   const data = await ConversionModel.aggregate(pipeline);
 
+  res.status(200).json({ success: true, data });
+});
+
+export const getImpactActionMetrics = asyncHandler(async (req, res, next) => {
+  let { startDate, endDate } = req.query;
+
+  // Default to the last 30 days if no date range is provided
+  if (!startDate || !endDate) {
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    endDate = today.toISOString().split('T')[0];
+    startDate = thirtyDaysAgo.toISOString().split('T')[0];
+  }
+
+  const pipeline = [
+    // 1. Filter actions within the specified date range
+    {
+      $match: {
+        EventDate: {
+          $gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+          $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999))
+        }
+      }
+    },
+
+    // 2. Find the associated TrackingLink for the action
+    {
+      $lookup: {
+        from: "TrackingLinks",
+        localField: "CampaignId",
+        foreignField: "ProgramId",
+        as: "TrackingLink"
+      }
+    },
+    { $unwind: { path: "$TrackingLink", preserveNullAndEmptyArrays: true } },
+
+    // 3. Find the correct Assignment based on the TrackingLink and EventDate
+    {
+      $lookup: {
+        from: "Assignments",
+        let: {
+          trackingLinkId: "$TrackingLink._id",
+          eventDate: "$EventDate"
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$trackingLinkId", "$$trackingLinkId"] },
+                  { $lte: ["$createdAt", "$$eventDate"] },
+                  {
+                    $cond: {
+                      if: { $gte: ["$inactiveDate", "$$eventDate"] },
+                      then: true,
+                      else: { $eq: ["$inactiveDate", null] }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        as: "Assignment"
+      }
+    },
+    { $unwind: { path: "$Assignment", preserveNullAndEmptyArrays: true } },
+
+    // 4. Calculate the assignedPayout for the user based on their commission
+    {
+      $addFields: {
+        assignedPayout: {
+          $cond: {
+            if: { $ifNull: ["$Assignment.commissionPercentage", false] },
+            then: {
+              $round: [
+                {
+                  $multiply: [
+                    { $toDouble: "$Payout" },
+                    { $divide: ["$Assignment.commissionPercentage", 100] }
+                  ]
+                },
+                2
+              ]
+            },
+            else: 0
+          }
+        }
+      }
+    },
+
+    // 5. Group by date and currency, and sum the calculated payouts
+    {
+      $group: {
+        _id: {
+          date: { $dateToString: { format: "%Y-%m-%d", date: "$EventDate" } },
+          currency: "$Currency"
+        },
+        totalAmount: { $sum: "$assignedPayout" }
+      }
+    },
+    
+    // 6. Reshape the data for the frontend
+    {
+      $project: {
+        _id: 0,
+        date: "$_id.date",
+        currency: "$_id.currency",
+        totalAmount: { $round: ["$totalAmount", 2] }
+      }
+    },
+
+    // 7. Sort by date to ensure the chart is chronological
+    { $sort: { date: 1, currency: 1 } }
+  ];
+
+  const data = await ActionModel.aggregate(pipeline);
   res.status(200).json({ success: true, data });
 });
