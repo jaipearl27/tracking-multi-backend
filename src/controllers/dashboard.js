@@ -3,6 +3,7 @@ import User from "../models/users.js";
 import Assignments from "../models/assignments.js"
 import { asyncHandler } from "../utils/errors/asyncHandler.js";
 import Withdrawal from "../models/withdrawls.js";
+import ConversionModel from "../models/partnerize/conversions.js";
 
 
 const getUserId = async (req, res) => {
@@ -125,7 +126,7 @@ export const getRecentAssignmentsMetrics = async (req, res) => {
       const name =
         assignment.platform === "impact"
           ? assignment.trackingLinkId?.TrackingLink || "N/A"
-          : assignment.campaign_id;   
+          : assignment.campaign_id;
 
       return {
         id: assignment._id,
@@ -165,26 +166,22 @@ export const getWithdrawalMetrics = async (req, res) => {
     const metrics = await Withdrawal.aggregate([
       {
         $match: {
-          approved: true, // Only count approved withdrawals
+          approved: true,
           createdAt: {
             $gte: start,
             $lte: end,
           },
         },
       },
-      // Stage 2: Group documents by the creation date
       {
         $group: {
           _id: {
             $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
           },
-          // Calculate the total amount withdrawn for that day
           totalAmount: { $sum: '$amount' },
-          // Count the number of withdrawals for that day
           count: { $sum: 1 },
         },
       },
-      // Stage 3: Sort the results by date in ascending order
       {
         $sort: {
           _id: 1,
@@ -204,3 +201,125 @@ export const getWithdrawalMetrics = async (req, res) => {
   }
 };
 
+
+
+export const getUserRegisterationMetrics = async (req, res) => {
+  try {
+
+    let startDate = req?.query?.startDate ? new Date(req?.query?.startDate) : new Date();
+
+    if (!req?.query?.startDate) {
+      const monthsToSubtract = 12;
+      startDate.setMonth(startDate.getMonth() - monthsToSubtract);
+    }
+
+    let endDate = req?.query?.endDate ? new Date(req?.query?.endDate) : new Date();
+
+    // Set both dates to UTC boundaries
+    startDate = new Date(Date.UTC(
+      startDate.getUTCFullYear(),
+      startDate.getUTCMonth(),
+      startDate.getUTCDate(),
+      0, 0, 0, 0
+    ));
+
+    endDate = new Date(Date.UTC(
+      endDate.getUTCFullYear(),
+      endDate.getUTCMonth(),
+      endDate.getUTCDate(),
+      23, 59, 59, 999
+    ));
+
+    console.log(startDate, endDate)
+
+
+
+    const pipeline = [
+      {
+        $match: {
+          createdAt: {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate)
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { _id: 1 } // Sort by date ascending
+      }
+    ]
+
+    const data = await User.aggregate(pipeline)
+
+    return res.status(200).json({message: "User Registeration metrics found successfully.", data: data})
+
+
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: "Internal server error, please try again later." })
+  }
+}
+
+
+export const getPartnerizeConversionMetrics = asyncHandler(async (req, res, next) => {
+  let { startDate, endDate } = req.query;
+
+  if (!startDate || !endDate) {
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    endDate = today.toISOString().split('T')[0];
+    startDate = thirtyDaysAgo.toISOString().split('T')[0];
+  }
+
+  const pipeline = [
+    // 1. Filter documents to be within the specified date range
+    {
+      $match: {
+        conversion_time: {
+          $gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+          $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999))
+        }
+      }
+    },
+    // 2. Group documents by both the date and the currency
+    {
+      $group: {
+        _id: {
+          date: { $dateToString: { format: "%Y-%m-%d", date: "$conversion_time" } },
+          currency: "$currency"
+        },
+        // Sum the commission for each group, ensuring it's a number
+        totalAmount: {
+          $sum: { $toDouble: "$conversion_value.publisher_commission" }
+        }
+      }
+    },
+    // 3. Project the data into a flatter, more usable structure
+    {
+      $project: {
+        _id: 0,
+        date: "$_id.date",
+        currency: "$_id.currency",
+        // Round the final total to 2 decimal places for currency
+        totalAmount: { $round: ["$totalAmount", 2] }
+      }
+    },
+    // 4. Sort the results chronologically by date
+    {
+      $sort: { date: 1, currency: 1 }
+    }
+  ];
+
+  const data = await ConversionModel.aggregate(pipeline);
+
+  res.status(200).json({ success: true, data });
+});

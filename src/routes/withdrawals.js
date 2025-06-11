@@ -7,7 +7,6 @@ import {
     updateWithdrawal,
     deleteWithdrawal,
     getWithdrawalsByUserId,
-    // getAvailablePayouts,
     getWithdrawals
 } from '../controllers/withdrawals.js';
 import { authenticateToken } from '../middlewares/authenticateToken.js';

@@ -125,9 +125,12 @@ export const scheduleClickExport = async (programId = undefined, date = undefine
                 }
             });
 
-            const DBResponse = await ClickEventModel.bulkWrite(clickEvents);
-            console.log('DBResponse', data, DBResponse)
-            return { success: true, message: "Clicks Export job completed", data, DBResponse };
+            if(Array.isArray(clickEvents) && clickEvents?.length > 0){
+                const DBResponse = await ClickEventModel.bulkWrite(clickEvents);
+                return { success: true, message: "Clicks Export job completed", data, DBResponse };
+            }
+            return {success: false, message: "Internal server error, will try again later 😞."}
+            // console.log('DBResponse', data, DBResponse)
         } else {
             return { success: false, message: "This Click Export job already still being processed..." };
         }
