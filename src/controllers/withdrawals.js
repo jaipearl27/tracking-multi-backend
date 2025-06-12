@@ -524,7 +524,7 @@ export const getWithdrawals = asyncHandler(async (req, res) => {
 
 // Create a new withdrawal request
 export const createWithdrawal = asyncHandler(async (req, res, next) => {
-    const { amount, approved, currency } = req.body;
+    const { amount, currency } = req.body;
 
     // Validate input
     if (!amount && !currency) {
@@ -561,10 +561,10 @@ export const createWithdrawal = asyncHandler(async (req, res, next) => {
         currency
     };
 
-    // 'approved' is optional and defaults to true in the schema
-    if (approved !== undefined && typeof approved === 'boolean') {
-        withdrawalPayload.approved = approved;
-    }
+    // // 'approved' is optional and defaults to true in the schema
+    // if (approved !== undefined && typeof approved === 'boolean') {
+    //     withdrawalPayload.approved = approved;
+    // }
 
     const withdrawal = await Withdrawal.create(withdrawalPayload);
 
@@ -650,8 +650,10 @@ export const updateWithdrawal = asyncHandler(async (req, res, next) => {
         }
         updatePayload.amount = amount;
     }
-    if (approved !== undefined && typeof approved === 'boolean') {
+    if (approved !== undefined && typeof approved === 'boolean' && !withdrawal.approved) {
         updatePayload.approved = approved;
+    } else {
+        return res.status(400).json({success: false, message: "Withdrawal request has already been approved."})
     }
 
     if (Object.keys(updatePayload).length === 0) {

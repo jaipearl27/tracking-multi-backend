@@ -9,7 +9,7 @@ const withdrawalSchema = new mongoose.Schema({
     approved: {
         type: Boolean,
         required: false,
-        default: true //change in future if explicit approval is required.
+        default: false
     },
     amount: {
         type: Number,
